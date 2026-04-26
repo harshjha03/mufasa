@@ -17,11 +17,9 @@ interface AppState {
   selectedDay: number
   loading: boolean
   generatingPlan: boolean
-
   setUser: (user: User | null) => void
   setSelectedDay: (day: number) => void
   setLoading: (v: boolean) => void
-
   loadUserData: (userId: string) => Promise<void>
   logWeight: (weight: number) => Promise<void>
   toggleExercise: (date: string, index: number) => Promise<void>
@@ -38,17 +36,9 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  user: null,
-  profile: null,
-  plan: null,
-  weightLog: [],
-  workoutDone: {},
-  expenses: [],
-  foodLogs: [],
-  startDate: null,
-  selectedDay: new Date().getDay(),
-  loading: true,
-  generatingPlan: false,
+  user: null, profile: null, plan: null, weightLog: [], workoutDone: {},
+  expenses: [], foodLogs: [], startDate: null,
+  selectedDay: new Date().getDay(), loading: true, generatingPlan: false,
 
   setUser: (user) => set({ user }),
   setSelectedDay: (day) => set({ selectedDay: day }),
@@ -56,10 +46,21 @@ export const useStore = create<AppState>((set, get) => ({
 
   loadUserData: async (userId) => {
     try {
-      console.log('[Mufasa] loadUserData start')
+      console.log('[Mufasa] loadUserData start for', userId)
 
-      const { data: profileData, error: profileError } = await sb.from('profiles').select('*').eq('user_id', userId).single()
-      console.log('[Mufasa] profile fetch:', profileData ? 'found' : 'not found', profileError?.message ?? '')
+      // Ensure session is active on the client before any DB call
+      const { data: { session } } = await sb.auth.getSession()
+      console.log('[Mufasa] session check:', session?.user?.email ?? 'NO SESSION')
+      if (!session) {
+        console.log('[Mufasa] no session, aborting')
+        set({ loading: false })
+        return
+      }
+
+      console.log('[Mufasa] fetching profile...')
+      const { data: profileData, error: profileError } = await sb
+        .from('profiles').select('*').eq('user_id', userId).single()
+      console.log('[Mufasa] profile:', profileData ? 'found' : 'not found', profileError?.message ?? '')
 
       if (profileData) {
         const profile: Profile = {
@@ -71,19 +72,18 @@ export const useStore = create<AppState>((set, get) => ({
           injuries: profileData.injuries, wake_time: profileData.wake_time,
           sleep_time: profileData.sleep_time, gym_access: profileData.gym_access,
           diet_type: profileData.diet_type, monthly_budget: profileData.monthly_budget,
-          deactivated: profileData.deactivated,
-          deactivated_at: profileData.deactivated_at,
+          deactivated: profileData.deactivated, deactivated_at: profileData.deactivated_at,
         }
         set({ profile })
 
-        // Fetch plan — don't block loading on this
-        const { data: planData, error: planError } = await sb.from('ai_plans').select('plan').eq('user_id', userId).single()
-        console.log('[Mufasa] plan fetch:', planData ? 'found' : 'not found', planError?.message ?? '')
+        console.log('[Mufasa] fetching plan...')
+        const { data: planData, error: planError } = await sb
+          .from('ai_plans').select('plan').eq('user_id', userId).single()
+        console.log('[Mufasa] plan:', planData ? 'found' : 'not found', planError?.message ?? '')
 
         if (planData?.plan) {
           set({ plan: planData.plan as AIPlan })
         } else {
-          // Generate plan in background — don't block loading
           set({ generatingPlan: true });
           (async () => {
             try {
@@ -96,9 +96,9 @@ export const useStore = create<AppState>((set, get) => ({
                 { onConflict: 'user_id' }
               )
               set({ plan })
-              console.log('[Mufasa] plan generated and saved')
+              console.log('[Mufasa] plan generated')
             } catch (e) {
-              console.error('[Mufasa] plan generation failed:', e)
+              console.error('[Mufasa] plan gen failed:', e)
             } finally {
               set({ generatingPlan: false })
             }
@@ -106,28 +106,27 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
 
-      // Load all other data in parallel
+      console.log('[Mufasa] fetching remaining data...')
+      const since = new Date(); since.setDate(since.getDate() - 60)
       const [wlRes, wdRes, expRes, flRes] = await Promise.all([
         sb.from('weight_log').select('*').eq('user_id', userId).order('date'),
-        sb.from('workout_done').select('*').eq('user_id', userId).gte('date', (() => { const d = new Date(); d.setDate(d.getDate() - 60); return d.toISOString().split('T')[0] })()),
+        sb.from('workout_done').select('*').eq('user_id', userId).gte('date', since.toISOString().split('T')[0]),
         sb.from('expenses').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         sb.from('food_logs').select('*').eq('user_id', userId).eq('date', new Date().toISOString().split('T')[0]).order('logged_at'),
       ])
+      console.log('[Mufasa] all data fetched')
 
       const weightLog: WeightEntry[] = (wlRes.data || []).map((r: any) => ({ date: r.date, weight: parseFloat(r.weight) }))
-
       const workoutDone: WorkoutDone = {}
       ;(wdRes.data || []).forEach((r: any) => {
         const key = 'wd_' + r.date
         if (!workoutDone[key]) workoutDone[key] = {}
         workoutDone[key][r.exercise_index] = r.done
       })
-
       const expenses: Expense[] = (expRes.data || []).map((r: any) => ({
         id: r.id, name: r.name, amount: parseFloat(r.amount),
         cat: r.category, month: r.month, date: r.expense_date,
       }))
-
       const foodLogs: FoodLog[] = (flRes.data || []).map((r: any) => ({
         id: r.id, date: r.date, meal_slot: r.meal_slot,
         food_name: r.food_name, serving_label: r.serving_label,
@@ -135,7 +134,6 @@ export const useStore = create<AppState>((set, get) => ({
         protein: parseFloat(r.protein), carbs: parseFloat(r.carbs),
         fat: parseFloat(r.fat), quantity: r.quantity || 1,
       }))
-
       const startDate = weightLog.length > 0 ? weightLog[0].date : new Date().toISOString().split('T')[0]
       console.log('[Mufasa] loadUserData complete')
       set({ weightLog, workoutDone, expenses, foodLogs, startDate, loading: false })
@@ -147,103 +145,73 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   loadFoodLogs: async (date) => {
-    const { user } = get()
-    if (!user) return
+    const { user } = get(); if (!user) return
     const { data: fl } = await sb.from('food_logs').select('*').eq('user_id', user.id).eq('date', date).order('logged_at')
     const foodLogs: FoodLog[] = (fl || []).map((r: any) => ({
-      id: r.id, date: r.date, meal_slot: r.meal_slot,
-      food_name: r.food_name, serving_label: r.serving_label,
-      serving_grams: r.serving_grams, calories: parseFloat(r.calories),
-      protein: parseFloat(r.protein), carbs: parseFloat(r.carbs),
-      fat: parseFloat(r.fat), quantity: r.quantity || 1,
+      id: r.id, date: r.date, meal_slot: r.meal_slot, food_name: r.food_name,
+      serving_label: r.serving_label, serving_grams: r.serving_grams,
+      calories: parseFloat(r.calories), protein: parseFloat(r.protein),
+      carbs: parseFloat(r.carbs), fat: parseFloat(r.fat), quantity: r.quantity || 1,
     }))
     set({ foodLogs })
   },
 
   saveProfile: async (profile) => {
-    const { user } = get()
-    if (!user) return
+    const { user } = get(); if (!user) return
     await sb.from('profiles').upsert({
       user_id: user.id, name: profile.name, age: profile.age, gender: profile.gender,
-      weight: profile.weight, height: profile.height,
-      activity_level: profile.activity_level, goal: profile.goal,
-      sport: profile.sport || 'none', sport_frequency: profile.sport_frequency || null,
-      injuries: profile.injuries || 'none', wake_time: profile.wake_time || '6:00 AM',
-      sleep_time: profile.sleep_time || '10:30 PM', gym_access: profile.gym_access || 'full_gym',
-      diet_type: profile.diet_type || 'non_vegetarian',
-      monthly_budget: profile.monthly_budget || 5000,
-      deactivated: false, deactivated_at: null,
+      weight: profile.weight, height: profile.height, activity_level: profile.activity_level,
+      goal: profile.goal, sport: profile.sport || 'none',
+      sport_frequency: profile.sport_frequency || null, injuries: profile.injuries || 'none',
+      wake_time: profile.wake_time || '6:00 AM', sleep_time: profile.sleep_time || '10:30 PM',
+      gym_access: profile.gym_access || 'full_gym', diet_type: profile.diet_type || 'non_vegetarian',
+      monthly_budget: profile.monthly_budget || 5000, deactivated: false, deactivated_at: null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
     set({ profile, generatingPlan: true });
     (async () => {
       try {
         const plan = await generateAIPlan(profile)
-        if (profile.monthly_budget) {
-          plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
-        }
-        await sb.from('ai_plans').upsert(
-          { user_id: user.id, plan, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
-        )
+        if (profile.monthly_budget) plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
+        await sb.from('ai_plans').upsert({ user_id: user.id, plan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
         set({ plan })
-      } catch (e) {
-        console.error('[Mufasa] saveProfile plan gen failed:', e)
-      } finally {
-        set({ generatingPlan: false })
-      }
+      } catch (e) { console.error('[Mufasa] saveProfile plan gen failed:', e) }
+      finally { set({ generatingPlan: false }) }
     })()
   },
 
   regeneratePlan: async () => {
-    const { user, profile } = get()
-    if (!user || !profile) return
+    const { user, profile } = get(); if (!user || !profile) return
     set({ generatingPlan: true });
     (async () => {
       try {
         const plan = await generateAIPlan(profile)
-        if (profile.monthly_budget) {
-          plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
-        }
-        await sb.from('ai_plans').upsert(
-          { user_id: user.id, plan, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' }
-        )
+        if (profile.monthly_budget) plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
+        await sb.from('ai_plans').upsert({ user_id: user.id, plan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
         set({ plan })
-      } catch (e) {
-        console.error('[Mufasa] regeneratePlan failed:', e)
-      } finally {
-        set({ generatingPlan: false })
-      }
+      } catch (e) { console.error('[Mufasa] regeneratePlan failed:', e) }
+      finally { set({ generatingPlan: false }) }
     })()
   },
 
   logWeight: async (weight) => {
-    const { user, weightLog } = get()
-    if (!user) return
+    const { user, weightLog } = get(); if (!user) return
     const date = new Date().toISOString().split('T')[0]
     await sb.from('weight_log').upsert({ user_id: user.id, date, weight }, { onConflict: 'user_id,date' })
-    const updated = weightLog.filter(e => e.date !== date)
-    updated.push({ date, weight })
-    updated.sort((a, b) => a.date.localeCompare(b.date))
+    const updated = [...weightLog.filter(e => e.date !== date), { date, weight }].sort((a, b) => a.date.localeCompare(b.date))
     set({ weightLog: updated, startDate: updated[0]?.date ?? date })
   },
 
   toggleExercise: async (date, index) => {
-    const { user, workoutDone } = get()
-    if (!user) return
+    const { user, workoutDone } = get(); if (!user) return
     const key = 'wd_' + date
     const newVal = !(workoutDone[key]?.[index] ?? false)
     set({ workoutDone: { ...workoutDone, [key]: { ...(workoutDone[key] || {}), [index]: newVal } } })
-    await sb.from('workout_done').upsert(
-      { user_id: user.id, date, exercise_index: index, done: newVal },
-      { onConflict: 'user_id,date,exercise_index' }
-    )
+    await sb.from('workout_done').upsert({ user_id: user.id, date, exercise_index: index, done: newVal }, { onConflict: 'user_id,date,exercise_index' })
   },
 
   addExpense: async (expense) => {
-    const { user, expenses } = get()
-    if (!user) return
+    const { user, expenses } = get(); if (!user) return
     const { data } = await sb.from('expenses').insert({
       user_id: user.id, name: expense.name, amount: expense.amount,
       category: expense.cat, month: expense.month, expense_date: expense.date,
@@ -252,50 +220,39 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteExpense: async (id) => {
-    const { user, expenses } = get()
-    if (!user) return
+    const { user, expenses } = get(); if (!user) return
     await sb.from('expenses').delete().eq('id', id).eq('user_id', user.id)
     set({ expenses: expenses.filter(e => e.id !== id) })
   },
 
   addFoodLog: async (log) => {
-    const { user, foodLogs } = get()
-    if (!user) return
+    const { user, foodLogs } = get(); if (!user) return
     const { data } = await sb.from('food_logs').insert({
       user_id: user.id, date: log.date, meal_slot: log.meal_slot,
       food_name: log.food_name, serving_label: log.serving_label,
       serving_grams: log.serving_grams, calories: log.calories,
-      protein: log.protein, carbs: log.carbs, fat: log.fat,
-      quantity: log.quantity || 1,
+      protein: log.protein, carbs: log.carbs, fat: log.fat, quantity: log.quantity || 1,
     }).select().single()
     if (data) set({ foodLogs: [...foodLogs, { ...log, id: data.id }] })
   },
 
   deleteFoodLog: async (id) => {
-    const { user, foodLogs } = get()
-    if (!user) return
+    const { user, foodLogs } = get(); if (!user) return
     await sb.from('food_logs').delete().eq('id', id).eq('user_id', user.id)
     set({ foodLogs: foodLogs.filter(f => f.id !== id) })
   },
 
   deactivateAccount: async () => {
-    const { user } = get()
-    if (!user) return
-    await sb.from('profiles')
-      .update({ deactivated: true, deactivated_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+    const { user } = get(); if (!user) return
+    await sb.from('profiles').update({ deactivated: true, deactivated_at: new Date().toISOString() }).eq('user_id', user.id)
     await sb.auth.signOut()
     set({ user: null, profile: null, plan: null, weightLog: [], workoutDone: {}, expenses: [], foodLogs: [], startDate: null })
   },
 
   restoreAccount: async () => {
-    const { user } = get()
-    if (!user) return
-    await sb.from('profiles')
-      .update({ deactivated: false, deactivated_at: null })
-      .eq('user_id', user.id)
-    const { loadUserData } = get()
-    await loadUserData(user.id)
+    const { user } = get(); if (!user) return
+    await sb.from('profiles').update({ deactivated: false, deactivated_at: null }).eq('user_id', user.id)
+    await get().loadUserData(user.id)
   },
 
   signOut: async () => {
