@@ -10,11 +10,11 @@ export function useAuth() {
 
     console.log('[Mufasa] useAuth init')
 
-    const boot = async (userId: string) => {
+    const boot = async (userId: string, accessToken: string, refreshToken: string) => {
       if (booted) return
       booted = true
-      // Wait for session to be fully set on the client
-      await new Promise(r => setTimeout(r, 100))
+      // Explicitly set session on client so RLS works
+      await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
       await loadUserData(userId)
     }
 
@@ -23,7 +23,7 @@ export function useAuth() {
       console.log('[Mufasa] getSession:', session?.user?.email ?? 'no session')
       if (session?.user) {
         setUser(session.user)
-        await boot(session.user.id)
+        await boot(session.user.id, session.access_token, session.refresh_token)
       } else {
         if (!booted) { booted = true; setLoading(false) }
       }
@@ -42,7 +42,7 @@ export function useAuth() {
       }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         setUser(session.user)
-        await boot(session.user.id)
+        await boot(session.user.id, session.access_token, session.refresh_token)
       }
     })
 
