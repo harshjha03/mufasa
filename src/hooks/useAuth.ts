@@ -10,39 +10,43 @@ export function useAuth() {
 
     console.log('[Mufasa] useAuth init')
 
-    // First — immediately check session directly, don't wait for event
-    sb.auth.getSession().then(async ({ data: { session }, error }) => {
-      console.log('[Mufasa] getSession result:', session?.user?.email ?? 'no session', error?.message ?? 'no error')
+    const boot = async (userId: string) => {
       if (booted) return
       booted = true
+      // Wait for session to be fully set on the client
+      await new Promise(r => setTimeout(r, 100))
+      await loadUserData(userId)
+    }
+
+    // Primary — getSession first
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('[Mufasa] getSession:', session?.user?.email ?? 'no session')
       if (session?.user) {
         setUser(session.user)
-        await loadUserData(session.user.id)
+        await boot(session.user.id)
       } else {
-        setLoading(false)
+        if (!booted) { booted = true; setLoading(false) }
       }
-    }).catch(err => {
-      console.log('[Mufasa] getSession error:', err)
+    }).catch(() => {
       if (!booted) { booted = true; setLoading(false) }
     })
 
-    // Also listen for changes (handles OAuth redirect, sign in, sign out)
+    // Also listen for auth changes
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       console.log('[Mufasa] auth event:', event, session?.user?.email ?? 'no user')
       if (event === 'SIGNED_OUT') {
-        booted = true
+        booted = false
         setUser(null)
         setLoading(false)
         return
       }
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user && !booted) {
-        booted = true
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         setUser(session.user)
-        await loadUserData(session.user.id)
+        await boot(session.user.id)
       }
     })
 
-    // Safety net — 10 seconds max
+    // Safety net
     const safety = setTimeout(() => {
       if (!booted) {
         console.log('[Mufasa] safety net triggered')
