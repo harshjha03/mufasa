@@ -8,19 +8,13 @@ export function useAuth() {
   useEffect(() => {
     console.log('[Mufasa] useAuth init')
 
-    // Single source of truth — onAuthStateChange handles everything
-    // including initial load, reload, OAuth redirect, and sign out
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       console.log('[Mufasa] auth event:', event, session?.user?.email ?? 'no user')
 
       if (session?.user) {
         setUser(session.user)
-        // Set session explicitly so RLS works
-        await sb.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token
-        })
-        await loadUserData(session.user.id)
+        // Use setTimeout to run outside the lock context
+        setTimeout(() => loadUserData(session.user!.id), 0)
       } else {
         setUser(null)
         setLoading(false)
