@@ -1,7 +1,24 @@
 [build]
-  command = "npm ci && npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
-
+ 
 [build.environment]
   NPM_CONFIG_PRODUCTION = "false"
   NODE_VERSION = "20"
+ 
+# Never cache the service worker or HTML — always fetch fresh
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+ 
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+ 
+# Cache assets forever (they have hashed filenames so this is safe)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
