@@ -48,15 +48,6 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       console.log('[Mufasa] loadUserData start for', userId)
 
-      // Ensure session is active on the client before any DB call
-      const { data: { session } } = await sb.auth.getSession()
-      console.log('[Mufasa] session check:', session?.user?.email ?? 'NO SESSION')
-      if (!session) {
-        console.log('[Mufasa] no session, aborting')
-        set({ loading: false })
-        return
-      }
-
       console.log('[Mufasa] fetching profile...')
       const { data: profileData, error: profileError } = await sb
         .from('profiles').select('*').eq('user_id', userId).single()
