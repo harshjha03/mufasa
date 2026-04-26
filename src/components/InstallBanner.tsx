@@ -6,10 +6,8 @@ export default function InstallBanner() {
   const [showIos, setShowIos] = useState(false)
 
   useEffect(() => {
-    // Already installed as PWA — never show
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) return
 
-    // Android install prompt
     const handler = (e: Event) => {
       e.preventDefault()
       setAndroidPrompt(e)
@@ -19,7 +17,6 @@ export default function InstallBanner() {
     }
     window.addEventListener('beforeinstallprompt', handler)
 
-    // iOS Safari detection
     const ua = window.navigator.userAgent
     const isIos = /iphone|ipad|ipod/i.test(ua)
     const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios|chrome/i.test(ua)
@@ -39,37 +36,57 @@ export default function InstallBanner() {
     setShowAndroid(false)
   }
 
-  const dismissAndroid = () => {
+  const dismiss = () => {
     setShowAndroid(false)
-    localStorage.setItem('pwa-dismissed', '1')
-  }
-
-  const dismissIos = () => {
     setShowIos(false)
-    localStorage.setItem('ios-banner-dismissed', '1')
+    localStorage.setItem(showAndroid ? 'pwa-dismissed' : 'ios-banner-dismissed', '1')
   }
 
   if (!showAndroid && !showIos) return null
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[448px] z-[200]"
-      style={{ bottom: 'calc(64px + 12px)', transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
-      <div className="rounded-2xl p-3.5 flex items-center gap-3 shadow-lg" style={{ background: '#2D3561' }}>
-        <span className="text-2xl flex-shrink-0">💪</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">Add Mufasa to Home Screen</p>
+    /* Full screen backdrop with blur */
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center px-6"
+      style={{ background: 'rgba(26,26,46,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      onClick={e => { if (e.target === e.currentTarget) dismiss() }}
+    >
+      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
+        {/* Top accent */}
+        <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #0A9396, #005F73)' }} />
+
+        <div className="p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #0A9396, #005F73)' }}>
+            <span className="text-3xl">💪</span>
+          </div>
+
+          <h2 className="text-xl font-extrabold text-ink mb-2">Add Mufasa to Home Screen</h2>
+
           {showIos ? (
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Tap <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">⎙ Share</span> then "Add to Home Screen"
+            <p className="text-sm text-ink/50 leading-relaxed mb-6">
+              Tap <span className="inline-flex items-center gap-1 bg-cream-2 px-2 py-0.5 rounded-lg text-xs font-bold text-ink">⎙ Share</span> then tap <strong className="text-ink">"Add to Home Screen"</strong> to install
             </p>
           ) : (
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Opens instantly · works offline</p>
+            <p className="text-sm text-ink/50 leading-relaxed mb-6">
+              Install Mufasa for instant access — works offline, no browser bar, feels like a native app
+            </p>
           )}
+
+          <div className="flex flex-col gap-2">
+            {showAndroid && (
+              <button onClick={installAndroid}
+                className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-opacity active:opacity-80"
+                style={{ background: 'linear-gradient(135deg, #0A9396, #005F73)' }}>
+                Install App
+              </button>
+            )}
+            <button onClick={dismiss}
+              className="w-full py-3 rounded-xl font-semibold text-sm text-ink/40 bg-cream hover:bg-cream-2 transition-colors">
+              {showIos ? 'Got it' : 'Not now'}
+            </button>
+          </div>
         </div>
-        {showAndroid && (
-          <button onClick={installAndroid} className="bg-teal text-white font-bold text-xs px-4 py-2 rounded-xl flex-shrink-0 active:opacity-80">Install</button>
-        )}
-        <button onClick={showAndroid ? dismissAndroid : dismissIos} className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>✕</button>
       </div>
     </div>
   )
