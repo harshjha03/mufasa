@@ -8,49 +8,52 @@ export function useAuth() {
   useEffect(() => {
     let booted = false
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (
-        (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')
-        && session?.user && !booted
-      ) {
-        booted = true
+    console.log('[Mufasa] useAuth init')
+
+    // First — immediately check session directly, don't wait for event
+    sb.auth.getSession().then(async ({ data: { session }, error }) => {
+      console.log('[Mufasa] getSession result:', session?.user?.email ?? 'no session', error?.message ?? 'no error')
+      if (booted) return
+      booted = true
+      if (session?.user) {
         setUser(session.user)
-        // Check if account is deactivated before loading
-        const { data: profileCheck } = await sb
-          .from('profiles')
-          .select('deactivated, deactivated_at')
-          .eq('user_id', session.user.id)
-          .single()
-        if (profileCheck?.deactivated) {
-          // Account deactivated — set user but mark as deactivated
-          setLoading(false)
-          // Store will handle showing recovery screen via profile.deactivated
-        }
         await loadUserData(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
-        booted = false
+      } else {
+        setLoading(false)
+      }
+    }).catch(err => {
+      console.log('[Mufasa] getSession error:', err)
+      if (!booted) { booted = true; setLoading(false) }
+    })
+
+    // Also listen for changes (handles OAuth redirect, sign in, sign out)
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+      console.log('[Mufasa] auth event:', event, session?.user?.email ?? 'no user')
+      if (event === 'SIGNED_OUT') {
+        booted = true
         setUser(null)
         setLoading(false)
+        return
+      }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user && !booted) {
+        booted = true
+        setUser(session.user)
+        await loadUserData(session.user.id)
       }
     })
 
-    // Fallback
-    const timer = setTimeout(async () => {
+    // Safety net — 10 seconds max
+    const safety = setTimeout(() => {
       if (!booted) {
-        const { data: { session } } = await sb.auth.getSession()
-        if (session?.user) {
-          booted = true
-          setUser(session.user)
-          await loadUserData(session.user.id)
-        } else {
-          setLoading(false)
-        }
+        console.log('[Mufasa] safety net triggered')
+        booted = true
+        setLoading(false)
       }
-    }, 1500)
+    }, 10000)
 
     return () => {
       subscription.unsubscribe()
-      clearTimeout(timer)
+      clearTimeout(safety)
     }
   }, [])
 }
