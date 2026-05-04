@@ -34,12 +34,12 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
       {/* Hero */}
       <div className="relative overflow-hidden mb-4 text-white" style={{
         background: 'linear-gradient(145deg, #2A1F14 0%, #4A3520 35%, #7A5C2E 70%, #C9A96E 100%)',
-        paddingTop: 'env(safe-area-inset-top, 48px)', minHeight: 220
+        paddingTop: 'env(safe-area-inset-top, 16px)', minHeight: 140  
       }}>
         <div className="absolute" style={{ top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,169,110,0.2), transparent 70%)' }} />
         <div className="absolute" style={{ bottom: -40, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%)' }} />
 
-        <div className="relative px-5 pb-6 pt-2">
+        <div className="relative px-5 pb-4 pt-2">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>
               {greeting}{firstName ? `, ${firstName}` : ''}
@@ -63,30 +63,13 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
             {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
 
-          <div className="flex gap-2 flex-wrap">
-            <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-              <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>fitness_center</span>
-              {' '}{wo ? wo.name : 'Rest Day'}
-            </span>
-            <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
-              <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>bedtime</span>
-              {' '}Bed by {profile?.sleep_time || '10:30 PM'}
-            </span>
-            <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{
-              background: calPct >= 90 ? 'rgba(201,169,110,0.3)' : 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(8px)',
-              border: `1px solid ${calPct >= 90 ? 'rgba(201,169,110,0.5)' : 'rgba(255,255,255,0.15)'}`
-            }}>
-              <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>restaurant</span>
-              {' '}{caloriesLogged > 0 ? `${caloriesLogged} / ${targetCal} kcal` : `${targetCal} kcal target`}
-            </span>
-          </div>
+
         </div>
       </div>
 
       {/* Unified macro card */}
       <div className="mx-4 mb-3 bg-white rounded-xl shadow-card p-4">
-        <div className="flex justify-end mb-3">
+        <div className="flex justify-start mb-3">
           {mode && <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-gold-pale text-gold-dark">{mode} Mode</span>}
         </div>
         <div className="grid grid-cols-4 gap-2">
