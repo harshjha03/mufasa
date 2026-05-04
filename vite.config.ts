@@ -8,6 +8,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
+      workbox: {
+        // Never cache Supabase requests
+        navigateFallback: 'index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+          },
+        ],
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       manifest: {
         name: 'Mufasa',
         short_name: 'Mufasa',

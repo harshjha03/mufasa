@@ -3,25 +3,73 @@ import type { Profile, AIPlan, Meal, Exercise, WorkoutDay, SportProtocol } from 
 const GEMINI_KEY = 'AIzaSyB_DNvosZuGCYPfXVOOw2S1r5l0faYvJic'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
 
-// Mifflin-St Jeor — always calculated locally, not left to AI
+// ── BODY TYPE DETECTION ──
+export function detectBodyType(
+  weight: number, height: number,
+  activityLevel: string
+): 'ectomorph' | 'mesomorph' | 'endomorph' {
+  const bmi = weight / ((height / 100) ** 2)
+  if (bmi < 18.5) return 'ectomorph'
+  if (bmi >= 25) return 'endomorph'
+  // Normal BMI — refine by activity
+  if (activityLevel === 'moderate' || activityLevel === 'very') return 'mesomorph'
+  if (activityLevel === 'sedentary') return 'endomorph'
+  return 'mesomorph'
+}
+
+// ── MACRO CALCULATION — activity + goal + body type aware ──
 export function calcMacros(profile: Profile) {
-  const w = Number(profile.weight), h = Number(profile.height), a = Number(profile.age)
+  const w = Number(profile.weight)
+  const h = Number(profile.height)
+  const a = Number(profile.age)
+
+  // Step 1 — BMR (Mifflin-St Jeor)
   const bmr = profile.gender === 'female'
     ? 10 * w + 6.25 * h - 5 * a - 161
     : 10 * w + 6.25 * h - 5 * a + 5
-  const multipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 }
-  const tdee = Math.round(bmr * multipliers[profile.activity_level])
-  const goalAdj = { lose: -350, recomp: 0, gain: 350 }
-  const calories = tdee + goalAdj[profile.goal]
-  const protein = Math.round(w * 2)
-  const fat = Math.round((calories * 0.25) / 9)
+
+  // Step 2 — TDEE
+  const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 }
+  const tdee = Math.round(bmr * activityMultipliers[profile.activity_level as keyof typeof activityMultipliers])
+
+  // Step 3 — Body type (use profile override if set, else calculate)
+  const bodyType = profile.body_type ?? detectBodyType(w, h, profile.activity_level)
+
+  // Step 4 — Calorie target by goal + body type
+  const calorieAdjustments: Record<string, Record<string, number>> = {
+    lose:   { ectomorph: -200, mesomorph: -350, endomorph: -500 },
+    recomp: { ectomorph: 0,    mesomorph: 0,    endomorph: 0    },
+    gain:   { ectomorph: 500,  mesomorph: 300,  endomorph: 150  },
+  }
+  const calories = Math.max(1200, tdee + (calorieAdjustments[profile.goal]?.[bodyType] ?? 0))
+
+  // Step 5 — Protein by activity + goal + body type
+  const proteinBase: Record<string, number> = { sedentary: 0.8, light: 1.2, moderate: 1.5, very: 1.8 }
+  const proteinGoalAdj: Record<string, number> = { lose: 0.2, recomp: 0.2, gain: 0.3 }
+  const proteinBodyAdj: Record<string, number> = { ectomorph: -0.1, mesomorph: 0, endomorph: 0.1 }
+  const proteinMultiplier =
+    (proteinBase[profile.activity_level] ?? 1.2) +
+    (proteinGoalAdj[profile.goal] ?? 0) +
+    (proteinBodyAdj[bodyType] ?? 0)
+  const protein = Math.round(w * proteinMultiplier)
+
+  // Step 6 — Fat & carbs by body type macro ratios
+  const macroRatios: Record<string, { fatPct: number }> = {
+    ectomorph:  { fatPct: 0.20 }, // high carb
+    mesomorph:  { fatPct: 0.25 }, // balanced
+    endomorph:  { fatPct: 0.30 }, // low carb
+  }
+  const fat = Math.round((calories * (macroRatios[bodyType]?.fatPct ?? 0.25)) / 9)
   const carbs = Math.round((calories - protein * 4 - fat * 9) / 4)
+
+  // Meta
   const bmiNum = w / ((h / 100) ** 2)
   const bmi = bmiNum.toFixed(1)
   const bmiCat = bmiNum < 18.5 ? 'Underweight' : bmiNum < 25 ? 'Normal' : bmiNum < 30 ? 'Overweight' : 'Obese'
   const workoutLevel = profile.activity_level === 'very' ? 'advanced' : profile.activity_level === 'moderate' ? 'intermediate' : 'beginner'
   const weightTarget = profile.goal === 'lose' ? '−0.5 to −1 kg/month' : profile.goal === 'gain' ? '+0.5 to +1 kg/month' : '±0 kg (recomp)'
-  return { bmr: Math.round(bmr), tdee, calories, protein, fat, carbs, bmi, bmiCat, workoutLevel, weightTarget }
+
+  return { bmr: Math.round(bmr), tdee, calories, protein, fat, carbs, bmi, bmiCat, workoutLevel, weightTarget, bodyType }
 }
 
 function buildPrompt(profile: Profile, macros: ReturnType<typeof calcMacros>): string {
@@ -46,11 +94,14 @@ CALCULATED NUTRITION TARGETS (use these exact numbers):
 
 INSTRUCTIONS:
 1. Generate a meal plan with 6 meals timed around their wake/sleep schedule
-2. Generate a workout split appropriate for their level and goal (${macros.workoutLevel})
-3. If they play a sport, include sport-specific warmup, recovery protocol
-4. All food should be practical Indian food available in India
-5. Workout exercises must use one of these animation types: press, pull, squat, curl, raise, hinge, rotate, run, plank, row
-6. Keep exercises realistic for their gym access level
+2. Meal foods MUST match their diet type: vegetarian gets no meat/eggs, eggetarian gets eggs but no meat, vegan gets no animal products, non-vegetarian can have all
+3. Generate a workout split appropriate for their level and goal (${macros.workoutLevel})
+4. If gym_access is 'home', use ONLY dumbbell/band exercises — no barbells, cables, or machines
+5. If gym_access is 'none', use ONLY bodyweight exercises
+6. If they play a sport (not 'none'), include a sport-specific protocol for THAT sport — not cricket unless they selected cricket
+7. All food should be practical Indian food available in India
+8. Workout exercises must use one of these animation types: press, pull, squat, curl, raise, hinge, rotate, run, plank, row
+9. Budget awareness: if monthly_budget < 3000, do NOT recommend supplements — focus on whole food protein sources only. If no gym access, remove gym membership from any cost estimates.
 
 Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just the JSON.
 

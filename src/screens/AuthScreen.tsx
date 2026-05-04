@@ -41,7 +41,7 @@ export default function AuthScreen() {
   return (
     <div className="fixed inset-0 bg-cream flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
       <div className="font-serif text-4xl text-ink mb-1">
-        Mu<span className="text-teal">fasa</span>
+        Mu<span className="text-gold-dark">fasa</span>
       </div>
       <p className="text-sm text-ink/40 mb-10">Your personal fitness & nutrition tracker</p>
 
@@ -60,14 +60,14 @@ export default function AuthScreen() {
         </div>
 
         <input
-          className="w-full bg-cream border-2 border-cream-3 text-ink font-sans text-base px-4 py-3 rounded-xl outline-none mb-3 focus:border-teal transition-colors"
+          className="w-full bg-cream border-2 border-cream-3 text-ink font-sans text-base px-4 py-3 rounded-xl outline-none mb-3 focus:border-gold transition-colors"
           type="email" placeholder="Email address" value={email}
           onChange={e => setEmail(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && document.getElementById('pw-input')?.focus()}
         />
         <input
           id="pw-input"
-          className="w-full bg-cream border-2 border-cream-3 text-ink font-sans text-base px-4 py-3 rounded-xl outline-none mb-1 focus:border-teal transition-colors"
+          className="w-full bg-cream border-2 border-cream-3 text-ink font-sans text-base px-4 py-3 rounded-xl outline-none mb-1 focus:border-gold transition-colors"
           type="password" placeholder="Password" value={password}
           onChange={e => setPassword(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAuth()}
@@ -76,13 +76,13 @@ export default function AuthScreen() {
         <button
           onClick={handleAuth}
           disabled={loading}
-          className="w-full bg-teal text-white font-bold text-base py-3.5 rounded-xl mt-3 disabled:opacity-50 transition-opacity active:opacity-80"
+          className="w-full bg-gold text-ink font-bold text-base py-3.5 rounded-xl mt-3 disabled:opacity-50 transition-opacity active:opacity-80"
         >
           {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
         </button>
 
         {error && <p className="text-danger text-xs text-center mt-3">{error}</p>}
-        {success && <p className="text-teal text-xs text-center mt-3">{success}</p>}
+        {success && <p className="text-gold-dark text-xs text-center mt-3">{success}</p>}
 
         <div className="flex items-center gap-3 my-4">
           <div className="flex-1 h-px bg-cream-3" />
@@ -92,7 +92,7 @@ export default function AuthScreen() {
 
         <button
           onClick={handleGoogle}
-          className="w-full bg-white border-2 border-cream-3 text-ink font-semibold text-sm py-3 rounded-xl flex items-center justify-center gap-2.5 hover:border-teal transition-colors active:opacity-80"
+          className="w-full bg-white border-2 border-cream-3 text-ink font-semibold text-sm py-3 rounded-xl flex items-center justify-center gap-2.5 hover:border-gold transition-colors active:opacity-80"
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

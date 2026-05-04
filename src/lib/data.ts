@@ -16,7 +16,7 @@ export interface WorkoutDay {
 
 export const WORKOUTS: Record<number, WorkoutDay | null> = {
   1: {
-    name: 'Push + Bowling Shoulder', color: '#0A9396', exercises: [
+    name: 'Push Day', color: '#0A9396', exercises: [
       { n: 'Bench Press', s: '4×10', m: 'Chest', anim: 'press' },
       { n: 'Incline Dumbbell Press', s: '3×10', m: 'Upper Chest', anim: 'press' },
       { n: 'Overhead Dumbbell Press', s: '3×10', m: 'Shoulders', anim: 'press' },
@@ -60,7 +60,7 @@ export const WORKOUTS: Record<number, WorkoutDay | null> = {
   },
   4: null,
   5: {
-    name: 'Push + Bowling Shoulder + Conditioning', color: '#0A9396', exercises: [
+    name: 'Push + Conditioning', color: '#0A9396', exercises: [
       { n: 'Bench Press', s: '4×10', m: 'Chest', anim: 'press' },
       { n: 'Incline Dumbbell Press', s: '3×10', m: 'Upper Chest', anim: 'press' },
       { n: 'Overhead Dumbbell Press', s: '3×10', m: 'Shoulders', anim: 'press' },
@@ -85,15 +85,15 @@ export const WORKOUTS: Record<number, WorkoutDay | null> = {
     ]
   },
   0: {
-    name: 'Cricket Day 🏏', color: '#CA9849', exercises: [
-      { n: '5 min jog (pre-bowling)', s: 'Before bowling', m: 'Warmup', anim: 'run' },
+    name: 'Sport Day 🏅', color: '#CA9849', exercises: [
+      { n: '5 min light jog', s: 'Pre-sport warmup', m: 'Warmup', anim: 'run' },
       { n: 'Hip circles + leg swings', s: '10 each side', m: 'Warmup', anim: 'rotate' },
-      { n: 'Cat-Cow', s: 'Pre-bowl', m: 'Spine', anim: 'hinge' },
-      { n: 'Walk 5 mins after spell', s: 'After spell', m: 'Recovery', anim: 'run' },
-      { n: "Child's Pose", s: '60 sec post-match', m: 'Recovery', anim: 'squat' },
+      { n: 'Cat-Cow', s: 'Pre-sport', m: 'Spine', anim: 'hinge' },
+      { n: 'Walk 5 mins after activity', s: 'Cool down', m: 'Recovery', anim: 'run' },
+      { n: "Child's Pose", s: '60 sec post-sport', m: 'Recovery', anim: 'squat' },
       { n: 'Hip Flexor Stretch', s: '45 sec each side', m: 'Recovery', anim: 'squat' },
-      { n: 'Whey scoop within 45 mins', s: 'Post-match nutrition', m: 'Nutrition', anim: 'plank' },
-      { n: 'Cold water on knees & lower back', s: 'Recovery', m: 'Recovery', anim: 'plank' },
+      { n: 'Protein within 45 mins', s: 'Post-sport nutrition', m: 'Nutrition', anim: 'plank' },
+      { n: 'Cold water on sore muscles', s: 'Recovery', m: 'Recovery', anim: 'plank' },
     ]
   },
 }

@@ -81,7 +81,7 @@ export default function ProgressScreen() {
     ctx.closePath(); ctx.fillStyle = grad; ctx.fill()
 
     // Line
-    ctx.strokeStyle = '#0A9396'; ctx.lineWidth = 2.5
+    ctx.strokeStyle = '#C9A96E'; ctx.lineWidth = 2.5
     ctx.beginPath()
     data.forEach((d, i) => i === 0 ? ctx.moveTo(toX(i), toY(d.weight)) : ctx.lineTo(toX(i), toY(d.weight)))
     ctx.stroke()
@@ -90,7 +90,7 @@ export default function ProgressScreen() {
     data.forEach((d, i) => {
       ctx.beginPath(); ctx.arc(toX(i), toY(d.weight), 4, 0, Math.PI * 2)
       ctx.fillStyle = '#fff'; ctx.fill()
-      ctx.strokeStyle = '#0A9396'; ctx.lineWidth = 2.5; ctx.stroke()
+      ctx.strokeStyle = '#C9A96E'; ctx.lineWidth = 2.5; ctx.stroke()
     })
 
     // X labels
@@ -104,16 +104,16 @@ export default function ProgressScreen() {
 
   const first = weightLog[0]?.weight
   const last = weightLog[weightLog.length - 1]?.weight
-  const totalChange = first && last ? (last - first).toFixed(1) : null
+  const totalChange = first !== undefined && last !== undefined && weightLog.length > 1 ? (last - first).toFixed(1) : null
   const weeks = weightLog.length > 1
-    ? Math.ceil((new Date(weightLog[weightLog.length - 1].date).getTime() - new Date(weightLog[0].date).getTime()) / (7 * 86400000))
+    ? Math.max(1, Math.ceil((new Date(weightLog[weightLog.length - 1].date).getTime() - new Date(weightLog[0].date).getTime()) / (7 * 86400000)))
     : 1
   const monthly = totalChange ? ((last! - first!) / Math.max(weeks / 4.33, 1)).toFixed(1) : null
   const onTrack = monthly ? parseFloat(monthly) >= -1 && parseFloat(monthly) <= -0.3 : false
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-12 pb-4">
+    <div className="pb-20">
+      <div className="px-4 pt-8 pb-4">
         <h1 className="font-serif text-3xl font-bold text-ink">Progress</h1>
         <p className="text-xs text-ink/40 mt-1">Weight · milestones · timeline</p>
       </div>
@@ -124,12 +124,14 @@ export default function ProgressScreen() {
         <p className="text-xs text-ink/40 mb-3">Every Monday — post-toilet, pre-food</p>
         <div className="flex gap-2">
           <input
-            className="flex-1 bg-cream border-2 border-cream-3 focus:border-teal text-ink font-bold text-lg px-4 py-3 rounded-xl outline-none transition-colors"
-            type="number" placeholder="81.0" step="0.1" value={weightInput}
+            className="flex-1 min-w-0 bg-cream border-2 border-cream-3 focus:border-gold text-ink font-bold text-lg px-4 py-3 rounded-xl outline-none transition-colors"
+            type="number" inputMode="decimal" placeholder="81.0" step="0.1" value={weightInput}
             onChange={e => setWeightInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLog()}
           />
-          <button onClick={handleLog} className="bg-teal text-white font-bold text-sm px-5 rounded-xl active:opacity-80">LOG IT</button>
+          <button onClick={handleLog} className="flex-shrink-0 bg-gold text-ink font-bold text-sm px-5 py-3 rounded-xl active:opacity-80">
+            <span className="ms ms-sm">add</span>
+          </button>
         </div>
         <p className="text-xs text-ink/30 mt-2">Target: {plan?.weightTarget ?? '−0.5 to −1 kg/month'}</p>
       </div>
@@ -137,9 +139,9 @@ export default function ProgressScreen() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5 mx-4 mb-3">
         {[
-          { val: last ? `${last}kg` : '—', label: 'Current', color: '' },
-          { val: totalChange ? `${parseFloat(totalChange) > 0 ? '+' : ''}${totalChange}kg` : '—', label: 'Total', color: totalChange && parseFloat(totalChange) <= 0 ? 'text-teal' : 'text-danger' },
-          { val: monthly ? `${parseFloat(monthly) > 0 ? '+' : ''}${monthly}` : '—', label: '/Month', color: onTrack ? 'text-teal' : 'text-gold' },
+          { val: last !== undefined ? `${last}kg` : '—', label: 'Current', color: '' },
+          { val: totalChange ? `${parseFloat(totalChange) > 0 ? '+' : ''}${totalChange}kg` : '—', label: 'Total', color: totalChange && parseFloat(totalChange) <= 0 ? 'text-gold-dark' : 'text-danger' },
+          { val: monthly ? `${parseFloat(monthly) > 0 ? '+' : ''}${monthly}` : '—', label: '/Month', color: onTrack ? 'text-gold-dark' : 'text-gold' },
         ].map(({ val, label, color }) => (
           <div key={label} className="bg-white rounded-xl shadow-card p-3.5 text-center">
             <p className={`text-xl font-extrabold leading-none ${color || 'text-ink'}`}>{val}</p>
@@ -169,7 +171,7 @@ export default function ProgressScreen() {
                 <div key={e.date} className="flex justify-between items-center py-2.5 border-b border-cream-2 last:border-0">
                   <span className="text-sm text-ink/60 font-medium">{e.date}</span>
                   <span className="text-base font-extrabold text-ink">{e.weight} kg</span>
-                  <span className={`text-xs font-bold ${diff ? (parseFloat(diff) < 0 ? 'text-teal' : 'text-danger') : 'text-ink/30'}`}>
+                  <span className={`text-xs font-bold ${diff ? (parseFloat(diff) < 0 ? 'text-gold-dark' : 'text-danger') : 'text-ink/30'}`}>
                     {diff ? `${parseFloat(diff) > 0 ? '+' : ''}${diff}` : '—'}
                   </span>
                 </div>
@@ -185,17 +187,17 @@ export default function ProgressScreen() {
         {TIMELINE.map((item, i) => (
           <div key={i} className="flex gap-4 pb-4 last:pb-0">
             <div className="flex flex-col items-center">
-              <div className={`w-9 h-9 rounded-full border-3 flex items-center justify-center text-xs font-extrabold flex-shrink-0 transition-all ${i === currentSection ? 'bg-teal border-teal text-white shadow-[0_0_0_4px_rgba(10,147,150,0.2)]' : i < currentSection ? 'bg-ink-2 border-ink-2 text-white' : 'bg-cream-2 border-cream-3 text-ink/30'}`}
+              <div className={`w-9 h-9 rounded-full border-3 flex items-center justify-center text-xs font-extrabold flex-shrink-0 transition-all ${i === currentSection ? 'bg-teal border-gold text-white shadow-[0_0_0_4px_rgba(10,147,150,0.2)]' : i < currentSection ? 'bg-ink-2 border-ink-2 text-white' : 'bg-cream-2 border-cream-3 text-ink/30'}`}
                 style={{ borderWidth: 3 }}>
                 {i < currentSection ? '✓' : item.wk}
               </div>
               {i < TIMELINE.length - 1 && <div className="flex-1 w-0.5 bg-cream-3 mt-1 min-h-[20px]" />}
             </div>
             <div className="flex-1 pt-1.5 pb-2">
-              <p className={`text-xs font-bold tracking-widest uppercase ${i === currentSection ? 'text-teal' : 'text-ink/30'}`}>Week {item.wk}</p>
+              <p className={`text-xs font-bold tracking-widest uppercase ${i === currentSection ? 'text-gold-dark' : 'text-ink/30'}`}>Week {item.wk}</p>
               <p className="text-sm font-bold text-ink mt-0.5">{item.label}</p>
               {i === currentSection && (
-                <span className="inline-block bg-teal-pale border border-teal-light text-teal text-xs font-bold px-2.5 py-1 rounded-lg mt-1.5">📍 You are here — Week {weekNum}</span>
+                <span className="inline-block bg-gold-pale border border-gold-light text-gold-dark text-xs font-bold px-2.5 py-1 rounded-lg mt-1.5"><span className="ms ms-sm">location_on</span> You are here — Week {weekNum}</span>
               )}
               <p className="text-xs text-ink/40 mt-2 leading-relaxed">🫀 {item.inside}</p>
               <p className="text-xs text-ink/60 mt-1 leading-relaxed">👁 {item.outside}</p>
@@ -215,7 +217,7 @@ export default function ProgressScreen() {
           { n: '5', title: '12 weeks minimum', sub: 'Most people quit at week 3. Don\'t be that guy.' },
         ].map(({ n, title, sub }) => (
           <div key={n} className="flex gap-3 mb-4 last:mb-0">
-            <span className="font-serif text-xl text-teal-light min-w-[20px]">{n}</span>
+            <span className="font-serif text-xl text-gold-dark-light min-w-[20px]">{n}</span>
             <div>
               <p className="text-sm font-bold text-white">{title}</p>
               <p className="text-xs text-white/40 mt-1">{sub}</p>

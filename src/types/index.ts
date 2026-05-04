@@ -18,6 +18,7 @@ export interface Profile {
   monthly_budget?: number
   deactivated?: boolean
   deactivated_at?: string
+  body_type?: 'ectomorph' | 'mesomorph' | 'endomorph'
 }
 
 export interface Exercise {

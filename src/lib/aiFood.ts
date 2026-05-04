@@ -4,7 +4,7 @@ const GEMINI_KEY = 'AIzaSyB_DNvosZuGCYPfXVOOw2S1r5l0faYvJic'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
 const GEMINI_SEARCH_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
 
-async function callGemini(prompt: string, useSearch = false): Promise<string> {
+async function callGemini(prompt: string, useSearch = false, retries = 2): Promise<string> {
   const body: any = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
@@ -18,41 +18,59 @@ async function callGemini(prompt: string, useSearch = false): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
+
+  if (res.status === 429 && retries > 0) {
+    await new Promise(r => setTimeout(r, 5000))
+    return callGemini(prompt, useSearch, retries - 1)
+  }
+
+  if (!res.ok) {
+    return ''
+  }
+
   const data = await res.json()
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 }
 
-// ── AI FOOD SEARCH ──
+// ── AI FOOD SEARCH (training data) ──
 export async function searchFoodAI(query: string): Promise<FoodItem[]> {
-  const prompt = `You are a nutritionist with knowledge of Indian foods. 
-A user searched for: "${query}"
+  return _searchFood(query, false)
+}
 
-Return ONLY a JSON array of up to 4 food items. No markdown, no explanation, just the array.
+// ── WEB FOOD SEARCH (live internet search) ──
+export async function searchFoodWeb(query: string): Promise<FoodItem[]> {
+  return _searchFood(query, true)
+}
+
+async function _searchFood(query: string, useWeb: boolean): Promise<FoodItem[]> {
+  const prompt = `${useWeb ? 'Search the web for nutritional information about: ' : 'You are a nutritionist with knowledge of Indian foods. A user searched for: '}"${query}"
+
+Return ONLY a JSON array of up to 6 food items with accurate nutritional data. No markdown, no explanation, just the array.
 Each item must follow this exact format:
 [
   {
-    "id": "unique_id",
-    "name": "Food name",
-    "serving_label": "1 katori / 1 roti / 1 glass / 1 piece",
+    "id": "unique_lowercase_id",
+    "name": "Exact food name (brand if applicable)",
+    "serving_label": "1 katori / 1 piece / 1 glass / per 100g",
     "serving_grams": 150,
     "calories": 130,
     "protein": 9,
     "carbs": 22,
     "fat": 1.5,
-    "category": "Lentils"
+    "category": "Meals"
   }
 ]
 
 Rules:
-- Use Indian serving sizes (katori, roti, glass, piece, tbsp, scoop)
-- All values per one serving
-- Be accurate with macros
-- If it's a supplement or protein powder, use per scoop
-- category must be one of: Grains, Lentils, Dairy, Eggs, Meat, Vegetables, Fruits, Snacks, Supplements, Drinks, Meals`
+- Use Indian serving sizes where applicable (katori, roti, glass, piece, tbsp, scoop)
+- For branded/packaged foods use per-pack or per-serving as labelled
+- All macro values per one serving
+- Be accurate — use real nutritional data${useWeb ? ' from the web search results' : ''}
+- category must be one of: Grains, Lentils, Dairy, Eggs, Meat, Vegetables, Fruits, Snacks, Supplements, Drinks, Meals, FastFood`
 
   try {
-    const raw = await callGemini(prompt)
-    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const raw = await callGemini(prompt, useWeb)
+    const cleaned = raw.replace(/\`\`\`json\n?/g, '').replace(/\`\`\`\n?/g, '').trim()
     const start = cleaned.indexOf('[')
     const end = cleaned.lastIndexOf(']')
     if (start === -1 || end === -1) return []
@@ -64,53 +82,52 @@ Rules:
 
 // ── BUDGET ESTIMATION (Phase 1 — from training data) ──
 export async function estimateBudgetAI(profile: Profile, monthlyBudget: number): Promise<BudgetBreakdown> {
-  const prompt = `You are a fitness budget advisor in India. Estimate a monthly fitness budget breakdown.
+  const hasGym = profile.gym_access === 'full_gym'
+  const hasSupplements = monthlyBudget >= 3000
 
-USER PROFILE:
-- Goal: ${profile.goal === 'lose' ? 'Fat loss' : profile.goal === 'gain' ? 'Muscle gain' : 'Recomposition'}
-- Diet: ${profile.diet_type || 'non_vegetarian'}
-- Gym access: ${profile.gym_access || 'full_gym'}
-- Monthly budget: ₹${monthlyBudget}
-- Weight: ${profile.weight}kg
+  // Don't call AI at all — calculate deterministically to avoid AI ignoring rules
+  const gymCost = hasGym ? Math.min(1800, Math.round(monthlyBudget * 0.3)) : 0
+  const suppCost = hasSupplements ? Math.min(1500, Math.round(monthlyBudget * 0.25)) : 0
+  const foodCost = monthlyBudget - gymCost - suppCost
 
-Give realistic Indian 2024 prices (BigBasket/local market). 
-Respond ONLY with a JSON object, no markdown:
+  const items: BudgetBreakdown['items'] = []
 
-{
-  "gym": 1800,
-  "supplements": 2000,
-  "food": 1500,
-  "total": 5300,
-  "items": [
-    { "name": "MuscleBlaze Biozyme Whey 1kg", "estimated_price": 1899, "monthly_qty": "1 bag", "category": "supplements" },
-    { "name": "Eggs (farm fresh)", "estimated_price": 750, "monthly_qty": "120 eggs (4/day)", "category": "food" },
-    { "name": "Gym membership (mid-tier)", "estimated_price": 1800, "monthly_qty": "1 month", "category": "gym" }
-  ],
-  "notes": "Your budget of ₹X is [sufficient/tight]. Suggestion: ..."
-}`
+  if (hasGym) {
+    items.push({ name: 'Gym membership', estimated_price: gymCost, monthly_qty: '1 month', category: 'gym' })
+  }
 
-  try {
-    const raw = await callGemini(prompt)
-    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const start = cleaned.indexOf('{')
-    const end = cleaned.lastIndexOf('}')
-    const parsed = JSON.parse(cleaned.slice(start, end + 1))
-    return { ...parsed, last_updated: new Date().toISOString() } as BudgetBreakdown
-  } catch {
-    // Fallback
-    return {
-      gym: Math.round(monthlyBudget * 0.3),
-      supplements: Math.round(monthlyBudget * 0.35),
-      food: Math.round(monthlyBudget * 0.35),
-      total: monthlyBudget,
-      items: [
-        { name: 'Gym membership', estimated_price: Math.round(monthlyBudget * 0.3), monthly_qty: '1 month', category: 'gym' },
-        { name: 'Whey protein', estimated_price: Math.round(monthlyBudget * 0.35), monthly_qty: '1 bag', category: 'supplements' },
-        { name: 'Extra food items', estimated_price: Math.round(monthlyBudget * 0.35), monthly_qty: 'Monthly', category: 'food' },
-      ],
-      notes: `Budget of ₹${monthlyBudget} allocated across gym, supplements, and food.`,
-      last_updated: new Date().toISOString()
+  if (hasSupplements) {
+    items.push({ name: 'MuscleBlaze Whey protein (1kg)', estimated_price: suppCost, monthly_qty: '1 bag', category: 'supplements' })
+  }
+
+  // Food items based on diet and remaining budget
+  const dietType = profile.diet_type || 'non_vegetarian'
+  if (dietType === 'non_vegetarian' || dietType === 'eggetarian') {
+    items.push({ name: 'Eggs (6/day)', estimated_price: Math.round(foodCost * 0.35), monthly_qty: '~180 eggs', category: 'food' })
+    if (dietType === 'non_vegetarian') {
+      items.push({ name: 'Chicken breast', estimated_price: Math.round(foodCost * 0.3), monthly_qty: '~3kg/week', category: 'food' })
     }
+    items.push({ name: 'Dal, sabzi, roti (staples)', estimated_price: Math.round(foodCost * 0.35), monthly_qty: 'Daily meals', category: 'food' })
+  } else {
+    items.push({ name: 'Paneer (500g × 4)', estimated_price: Math.round(foodCost * 0.35), monthly_qty: '4 packs/month', category: 'food' })
+    items.push({ name: 'Milk (1L/day)', estimated_price: Math.round(foodCost * 0.25), monthly_qty: '30L/month', category: 'food' })
+    items.push({ name: 'Dal, sabzi, roti (staples)', estimated_price: Math.round(foodCost * 0.4), monthly_qty: 'Daily meals', category: 'food' })
+  }
+
+  const notes = monthlyBudget < 2500
+    ? `₹${monthlyBudget} is a tight budget. Focus on whole food protein — eggs, dal, curd, milk. No supplements needed at this stage.`
+    : monthlyBudget < 5000
+    ? `₹${monthlyBudget} is a comfortable budget for basics. ${hasSupplements ? 'Basic whey included.' : ''} Prioritise food quality over supplements.`
+    : `₹${monthlyBudget} is well-funded. ${hasGym ? 'Good gym + ' : ''}protein sources + ${hasSupplements ? 'quality supplements' : 'whole foods'} covered.`
+
+  return {
+    gym: gymCost,
+    supplements: suppCost,
+    food: foodCost,
+    total: monthlyBudget,
+    items,
+    notes,
+    last_updated: new Date().toISOString()
   }
 }
 

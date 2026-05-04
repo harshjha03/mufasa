@@ -45,11 +45,11 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-12 pb-3">
+    <div className="pb-20">
+      <div className="px-4 pt-8 pb-3">
         <h1 className="font-serif text-3xl font-bold text-ink">Expenses</h1>
         <div className="flex gap-1 bg-cream-2 p-1 rounded-xl mt-3">
-          {([['tracker', '📊 Tracker'], ['budget', '💡 Budget']] as const).map(([id, label]) => (
+          {([['tracker', 'Tracker', 'bar_chart'], ['budget', 'Budget', 'lightbulb']] as const).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${tab === id ? 'bg-white text-ink shadow-sm' : 'text-ink/40'}`}>
               {label}
@@ -69,7 +69,7 @@ export default function ExpensesScreen() {
               <p className="text-xs text-ink/30 mt-0.5">This month</p>
             </div>
             <div className="bg-white rounded-xl shadow-card p-4">
-              <p className={`text-2xl font-extrabold leading-none ${total <= monthlyBudget ? 'text-teal' : 'text-danger'}`}>
+              <p className={`text-2xl font-extrabold leading-none ${total <= monthlyBudget ? 'text-gold-dark' : 'text-danger'}`}>
                 ₹{Math.round(Math.max(0, monthlyBudget - total)).toLocaleString('en-IN')}
               </p>
               <p className="text-xs font-bold tracking-wide text-ink/30 uppercase mt-1">Remaining</p>
@@ -81,7 +81,7 @@ export default function ExpensesScreen() {
           <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-4">
             <div className="flex justify-between text-sm font-semibold text-ink mb-2">
               <span>Monthly budget</span>
-              <span className={total > monthlyBudget ? 'text-danger' : 'text-teal'}>
+              <span className={total > monthlyBudget ? 'text-danger' : 'text-gold-dark'}>
                 {Math.round(total / monthlyBudget * 100)}%
               </span>
             </div>
@@ -120,18 +120,18 @@ export default function ExpensesScreen() {
           {/* Add expense */}
           <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
             <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Add Expense</p>
-            <input className="w-full bg-cream border-2 border-cream-3 focus:border-teal text-ink text-sm px-4 py-3 rounded-xl outline-none mb-2.5 transition-colors"
+            <input className="w-full bg-cream border-2 border-cream-3 focus:border-gold text-ink text-sm px-4 py-3 rounded-xl outline-none mb-2.5 transition-colors"
               placeholder="Item name (e.g. Whey protein)" value={name} onChange={e => setName(e.target.value)} />
             <div className="grid grid-cols-2 gap-2.5 mb-2.5">
-              <input className="bg-cream border-2 border-cream-3 focus:border-teal text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
+              <input className="bg-cream border-2 border-cream-3 focus:border-gold text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
                 type="number" placeholder="₹ Amount" value={amount} onChange={e => setAmount(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAdd()} />
-              <select className="bg-cream border-2 border-cream-3 focus:border-teal text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
+              <select className="bg-cream border-2 border-cream-3 focus:border-gold text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
                 value={cat} onChange={e => setCat(e.target.value as Expense['cat'])}>
                 {CAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <button onClick={handleAdd} className="w-full bg-teal text-white font-bold text-sm py-3 rounded-xl active:opacity-80">Add Expense</button>
+            <button onClick={handleAdd} className="w-full bg-gold text-ink font-bold text-sm py-3 rounded-xl active:opacity-80">Add Expense</button>
           </div>
 
           {/* Entries */}
@@ -159,7 +159,7 @@ export default function ExpensesScreen() {
           {/* AI Budget breakdown */}
           {budgetBreakdown ? (
             <>
-              <div className="mx-4 mb-3 rounded-card p-5 text-white" style={{ background: 'linear-gradient(135deg, #2D3561, #005F73)' }}>
+              <div className="mx-4 mb-3 rounded-card p-5 text-white" style={{ background: 'linear-gradient(135deg, #2A1F14, #A07840)' }}>
                 <p className="text-xs font-bold tracking-widest opacity-60 uppercase mb-2">AI Budget Estimate</p>
                 <p className="text-3xl font-extrabold">₹{budgetBreakdown.total.toLocaleString('en-IN')}</p>
                 <p className="text-xs opacity-50 mt-1">Estimated monthly spend</p>
@@ -180,7 +180,7 @@ export default function ExpensesScreen() {
               {/* Notes */}
               {budgetBreakdown.notes && (
                 <div className="mx-4 mb-3 bg-cream-2 rounded-xl p-4">
-                  <p className="text-sm text-ink/70 leading-relaxed">💡 {budgetBreakdown.notes}</p>
+                  <p className="text-sm text-ink/70 leading-relaxed"><span className="ms ms-sm">lightbulb</span> {budgetBreakdown.notes}</p>
                 </div>
               )}
 
@@ -201,8 +201,8 @@ export default function ExpensesScreen() {
               {/* Refresh prices button */}
               <div className="mx-4 mb-3">
                 <button onClick={handleRefreshBudget} disabled={refreshingBudget}
-                  className="w-full bg-white border-2 border-teal text-teal font-bold text-sm py-3.5 rounded-xl active:opacity-80 disabled:opacity-50 transition-all">
-                  {refreshingBudget ? '🔍 Searching live prices...' : '🔄 Refresh with live prices'}
+                  className="w-full bg-white border-2 border-gold text-gold-dark font-bold text-sm py-3.5 rounded-xl active:opacity-80 disabled:opacity-50 transition-all">
+                  {refreshingBudget ? <><span className="ms ms-sm" style={{fontSize:16}}>search</span> Searching...</> : <><span className="ms ms-sm" style={{fontSize:16}}>refresh</span> Refresh with live prices</>}
                 </button>
                 <p className="text-xs text-ink/30 text-center mt-2">Uses web search for current BigBasket / Amazon prices</p>
                 {budgetBreakdown.last_updated && (
@@ -223,7 +223,7 @@ export default function ExpensesScreen() {
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-cream-2">
                   <span className="text-sm font-bold text-ink">Difference</span>
-                  <span className={`text-sm font-bold ${monthlyBudget >= budgetBreakdown.total ? 'text-teal' : 'text-danger'}`}>
+                  <span className={`text-sm font-bold ${monthlyBudget >= budgetBreakdown.total ? 'text-gold-dark' : 'text-danger'}`}>
                     {monthlyBudget >= budgetBreakdown.total ? '+' : ''}₹{(monthlyBudget - budgetBreakdown.total).toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -231,7 +231,7 @@ export default function ExpensesScreen() {
             </>
           ) : (
             <div className="text-center py-16 px-4">
-              <p className="text-4xl mb-3">💰</p>
+              <p className="text-4xl mb-3"><span className="ms ms-sm">account_balance_wallet</span></p>
               <p className="text-sm font-semibold text-ink/50">No budget estimate yet</p>
               <p className="text-xs text-ink/30 mt-1">Complete your profile with a monthly budget to get an AI estimate</p>
             </div>

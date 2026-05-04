@@ -33,13 +33,13 @@ export default function DeactivatedScreen() {
 
   return (
     <div className="fixed inset-0 bg-cream flex flex-col items-center justify-center px-6 py-10 overflow-y-auto">
-      <div className="font-serif text-3xl text-ink mb-8">Mu<span className="text-teal">fasa</span></div>
+      <div className="font-serif text-3xl text-ink mb-8">Mu<span className="text-gold-dark">fasa</span></div>
 
       {!confirming ? (
         <div className="bg-white rounded-card shadow-lg w-full max-w-sm overflow-hidden">
           {/* Header */}
-          <div className="p-6 text-center" style={{ background: 'linear-gradient(135deg, #2D3561, #005F73)' }}>
-            <div className="text-4xl mb-3">⏳</div>
+          <div className="p-6 text-center" style={{ background: 'linear-gradient(135deg, #2A1F14, #A07840)' }}>
+            <div className="text-4xl mb-3"><span className="ms ms-sm">hourglass_empty</span></div>
             <h2 className="text-xl font-extrabold text-white">Account Deactivated</h2>
             <p className="text-xs text-white/60 mt-1">Scheduled for deletion</p>
           </div>
@@ -76,7 +76,7 @@ export default function DeactivatedScreen() {
             <button
               onClick={handleRestore}
               disabled={loading}
-              className="w-full bg-teal text-white font-extrabold text-base py-4 rounded-xl mb-3 active:opacity-80 disabled:opacity-50 transition-all"
+              className="w-full bg-gold text-ink font-extrabold text-base py-4 rounded-xl mb-3 active:opacity-80 disabled:opacity-50 transition-all"
             >
               {loading ? 'Restoring...' : '✓ Restore My Account'}
             </button>
@@ -106,7 +106,7 @@ export default function DeactivatedScreen() {
         /* Confirm deletion modal */
         <div className="bg-white rounded-card shadow-lg w-full max-w-sm p-6">
           <div className="text-center mb-6">
-            <div className="text-4xl mb-3">🗑️</div>
+            <div className="text-4xl mb-3"><span className="ms ms-sm">delete</span></div>
             <h2 className="text-xl font-extrabold text-ink">Delete Everything?</h2>
             <p className="text-sm text-ink/50 mt-2 leading-relaxed">
               This will immediately and permanently delete all your data. There is no undo.
@@ -115,7 +115,7 @@ export default function DeactivatedScreen() {
 
           <div className="bg-danger/5 border border-danger/20 rounded-xl p-4 mb-6">
             <p className="text-sm text-danger font-semibold text-center">
-              ⚠️ This action cannot be reversed
+              <span className="ms ms-sm">warning</span> This action cannot be reversed
             </p>
           </div>
 

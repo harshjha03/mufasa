@@ -24,15 +24,15 @@ export default function WorkoutScreen() {
   const doneCount = Object.values(done).filter(Boolean).length
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-12 pb-3">
+    <div className="pb-20">
+      <div className="px-4 pt-8 pb-3">
         <h1 className="font-serif text-3xl font-bold text-ink">Workout</h1>
         {/* View toggle */}
         <div className="flex gap-1 bg-cream-2 p-1 rounded-xl mt-3 w-fit">
-          {([['day', '📅 Day'], ['week', '📆 Full Week']] as const).map(([id, label]) => (
+          {([['day', 'Day', 'calendar_today'], ['week', 'Full Week', 'calendar_month']] as const).map(([id, label, icon]) => (
             <button key={id} onClick={() => setView(id)}
-              className={`py-2 px-4 text-xs font-bold rounded-lg transition-all ${view === id ? 'bg-white text-ink shadow-sm' : 'text-ink/40'}`}>
-              {label}
+              className={`py-2 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${view === id ? 'bg-white text-ink shadow-sm' : 'text-ink/40'}`}>
+              <span className="ms ms-sm" style={{fontSize:14}}>{icon}</span>{label}
             </button>
           ))}
         </div>
@@ -52,14 +52,14 @@ export default function WorkoutScreen() {
             const isToday = d === todayDow
             return (
               <button key={d} onClick={() => { setSelectedDay(d); setView('day') }}
-                className={`w-full mb-3 bg-white rounded-card shadow-card p-4 text-left transition-all border-2 ${selectedDay === d ? 'border-teal' : 'border-transparent'} ${isToday ? 'ring-2 ring-teal/20' : ''}`}>
+                className={`w-full mb-3 bg-white rounded-card shadow-card p-4 text-left transition-all border-2 ${selectedDay === d ? 'border-gold' : 'border-transparent'} ${isToday ? 'ring-2 ring-teal/20' : ''}`}>
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-extrabold text-ink">{DAYS[d]}</span>
-                      {isToday && <span className="bg-teal text-white text-xs font-bold px-2 py-0.5 rounded-full">Today</span>}
+                      {isToday && <span className="bg-gold text-ink text-xs font-bold px-2 py-0.5 rounded-full">Today</span>}
                     </div>
-                    <p className="text-xs text-ink/40 mt-0.5">{dayWo ? dayWo.name : 'Rest Day 🌿'}</p>
+                    <p className="text-xs text-ink/40 mt-0.5">{dayWo ? dayWo.name : 'Rest Day <span className="ms ms-sm">spa</span>'}</p>
                   </div>
                   {dayWo && (
                     <div className="text-right">
@@ -75,7 +75,7 @@ export default function WorkoutScreen() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {dayWo.exercises.slice(0, 4).map((ex, i) => (
-                        <span key={i} className={`text-xs px-2 py-0.5 rounded-full font-medium ${dayDone[i] ? 'bg-teal-pale text-teal' : 'bg-cream-2 text-ink/40'}`}>
+                        <span key={i} className={`text-xs px-2 py-0.5 rounded-full font-medium ${dayDone[i] ? 'bg-gold-pale text-gold-dark' : 'bg-cream-2 text-ink/40'}`}>
                           {ex.name.split(' ').slice(0, 2).join(' ')}
                         </span>
                       ))}
@@ -128,7 +128,7 @@ export default function WorkoutScreen() {
 
           {!wo ? (
             <div className="bg-white rounded-card shadow-card mx-4 p-10 text-center">
-              <div className="text-5xl mb-3">🌿</div>
+              <div className="text-5xl mb-3"><span className="ms ms-sm">spa</span></div>
               <p className="text-xl font-extrabold text-ink">Rest Day</p>
               <p className="text-sm text-ink/40 mt-2">Light walk only. Muscles repair today.</p>
             </div>
@@ -136,16 +136,16 @@ export default function WorkoutScreen() {
             <div className="px-4 flex flex-col gap-2.5 mb-6">
               {wo.exercises.map((ex, i) => (
                 <button key={i} onClick={() => toggleExercise(selectedKey, i)}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${done[i] ? 'border-teal-pale bg-teal-pale' : 'bg-white border-cream-3 shadow-card'}`}>
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${done[i] ? 'border-gold-pale bg-gold-pale' : 'bg-white border-cream-3 shadow-card'}`}>
                   <div className="w-14 h-14 flex-shrink-0 bg-cream rounded-xl flex items-center justify-center">
-                    <ExerciseFigure anim={ex.anim} color={done[i] ? '#0A9396' : '#1A1A2E'} size={40} />
+                    <ExerciseFigure anim={ex.anim} color={done[i] ? '#C9A96E' : '#2A1F14'} size={40} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-ink">{ex.name}</p>
                     <p className="text-xs text-ink/40 mt-0.5">{ex.sets}</p>
                     <span className="inline-block text-xs font-bold uppercase tracking-wide bg-cream-2 text-ink/30 px-2 py-0.5 rounded-full mt-1.5">{ex.muscle}</span>
                   </div>
-                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm flex-shrink-0 transition-all ${done[i] ? 'bg-teal border-teal text-white' : 'border-cream-3'}`}>
+                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-sm flex-shrink-0 transition-all ${done[i] ? 'bg-teal border-gold text-white' : 'border-cream-3'}`}>
                     {done[i] && '✓'}
                   </div>
                 </button>
@@ -156,17 +156,17 @@ export default function WorkoutScreen() {
           {/* Sport Protocol */}
           {plan?.sportProtocol && (
             <div className="mx-4 mb-4 bg-white rounded-card shadow-card p-5">
-              <p className="text-xs font-bold tracking-widest text-gold uppercase mb-3">🏅 Sport Protocol</p>
+              <p className="text-xs font-bold tracking-widest text-gold uppercase mb-3"><span className="ms ms-sm">emoji_events</span> Sport Protocol</p>
               {plan.sportProtocol.pre.length > 0 && (
                 <div className="mb-3">
                   <p className="text-xs font-bold text-ink/40 uppercase tracking-wide mb-1.5">Before</p>
-                  {plan.sportProtocol.pre.map((s, i) => <div key={i} className="flex gap-2 text-sm text-ink/70 mb-1"><span className="text-teal font-bold">→</span><span>{s}</span></div>)}
+                  {plan.sportProtocol.pre.map((s, i) => <div key={i} className="flex gap-2 text-sm text-ink/70 mb-1"><span className="text-gold-dark font-bold">→</span><span>{s}</span></div>)}
                 </div>
               )}
               {plan.sportProtocol.post.length > 0 && (
                 <div className="mb-3">
                   <p className="text-xs font-bold text-ink/40 uppercase tracking-wide mb-1.5">After</p>
-                  {plan.sportProtocol.post.map((s, i) => <div key={i} className="flex gap-2 text-sm text-ink/70 mb-1"><span className="text-teal font-bold">→</span><span>{s}</span></div>)}
+                  {plan.sportProtocol.post.map((s, i) => <div key={i} className="flex gap-2 text-sm text-ink/70 mb-1"><span className="text-gold-dark font-bold">→</span><span>{s}</span></div>)}
                 </div>
               )}
               <p className="text-xs text-ink/50 mt-2 leading-relaxed">{plan.sportProtocol.nutrition}</p>

@@ -11,38 +11,39 @@ export default function ProfileScreen() {
   if (editing) return <OnboardingScreen onDone={() => setEditing(false)} />
 
   if (!profile || !plan) return (
-    <div className="pb-24 px-4 pt-12"><p className="text-ink/40 text-sm">No profile found.</p></div>
+    <div className="pb-20 px-4 pt-8"><p className="text-ink/40 text-sm">No profile found.</p></div>
   )
 
-  const genderIcon = profile.gender === 'female' ? '♀️' : profile.gender === 'male' ? '♂️' : '⚧️'
-  const goalLabels = { lose: 'Lose Fat 🔥', recomp: 'Recomposition ⚖️', gain: 'Build Muscle 💪' }
-  const actLabels = { sedentary: 'Sedentary 🪑', light: 'Lightly Active 🚶', moderate: 'Moderately Active 🏃', very: 'Very Active ⚡' }
+  const genderIcon = profile.gender === 'female' ? 'female' : profile.gender === 'male' ? 'male' : 'transgender'
+  const goalLabels = { lose: 'Lose Fat', recomp: 'Recomposition', gain: 'Build Muscle' }
+  const actLabels = { sedentary: 'Sedentary', light: 'Lightly Active', moderate: 'Moderately Active', very: 'Very Active' }
 
   const planRows = [
-    { icon: '🎯', label: 'Goal', val: goalLabels[profile.goal] },
-    { icon: '🔥', label: 'Daily Calories', val: `${plan.calories.toLocaleString('en-IN')} kcal` },
+    { icon: 'flag', label: 'Goal', val: goalLabels[profile.goal] },
+    { icon: 'local_fire_department', label: 'Daily Calories', val: `${plan.calories.toLocaleString('en-IN')} kcal` },
     { icon: '🥩', label: 'Protein', val: `${plan.protein}g/day` },
     { icon: '🍚', label: 'Carbs', val: `${plan.carbs}g/day` },
     { icon: '🫒', label: 'Fat', val: `${plan.fat}g/day` },
-    { icon: '📊', label: 'TDEE', val: `${plan.tdee} kcal` },
-    { icon: '⚖️', label: 'Monthly Target', val: plan.weightTarget },
-    { icon: '🏋️', label: 'Level', val: plan.workoutLevel.charAt(0).toUpperCase() + plan.workoutLevel.slice(1) },
+    { icon: 'bar_chart', label: 'TDEE', val: `${plan.tdee} kcal` },
+    { icon: 'balance', label: 'Monthly Target', val: plan.weightTarget },
+    { icon: 'fitness_center', label: 'Level', val: plan.workoutLevel.charAt(0).toUpperCase() + plan.workoutLevel.slice(1) },
     { icon: '📏', label: 'BMI', val: `${plan.bmi} — ${plan.bmiCat}` },
   ]
 
   const profileRows = [
-    { icon: '🏅', label: 'Sport', val: profile.sport && profile.sport !== 'none' ? `${profile.sport}${profile.sport_frequency ? ` · ${profile.sport_frequency}` : ''}` : 'None' },
+    { icon: 'emoji_events', label: 'Sport', val: profile.sport && profile.sport !== 'none' ? `${profile.sport}${profile.sport_frequency ? ` · ${profile.sport_frequency}` : ''}` : 'None' },
     { icon: '🤕', label: 'Injuries', val: profile.injuries && profile.injuries !== 'none' ? profile.injuries : 'None' },
-    { icon: '🌅', label: 'Schedule', val: `${profile.wake_time || '6:00 AM'} – ${profile.sleep_time || '10:30 PM'}` },
-    { icon: '🏋️', label: 'Gym access', val: profile.gym_access === 'full_gym' ? 'Full gym' : profile.gym_access === 'home' ? 'Home workout' : 'No equipment' },
-    { icon: '🥗', label: 'Diet', val: profile.diet_type === 'vegetarian' ? 'Vegetarian' : profile.diet_type === 'vegan' ? 'Vegan' : 'Non-vegetarian' },
+    { icon: 'person', label: 'Body Type', val: profile.body_type ? profile.body_type.charAt(0).toUpperCase() + profile.body_type.slice(1) : 'Not set' },
+    { icon: 'schedule', label: 'Schedule', val: `${profile.wake_time || '6:00 AM'} – ${profile.sleep_time || '10:30 PM'}` },
+    { icon: 'fitness_center', label: 'Gym access', val: profile.gym_access === 'full_gym' ? 'Full gym' : profile.gym_access === 'home' ? 'Home workout' : 'No equipment' },
+    { icon: 'restaurant', label: 'Diet', val: profile.diet_type === 'vegetarian' ? 'Vegetarian' : profile.diet_type === 'vegan' ? 'Vegan' : 'Non-vegetarian' },
   ]
 
   return (
-    <div className="pb-24">
+    <div className="pb-20">
       {/* Hero */}
-      <div className="mx-4 mt-12 mb-3 rounded-card p-6 text-white" style={{ background: 'linear-gradient(135deg, #2D3561, #005F73)' }}>
-        <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center text-2xl mb-3">{genderIcon}</div>
+      <div className="mx-4 mt-12 mb-3 rounded-card p-6 text-white" style={{ background: 'linear-gradient(135deg, #2A1F14, #A07840)' }}>
+        <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center mb-3"><span className="ms ms-lg text-white">{genderIcon}</span></div>
         <h1 className="font-serif text-2xl font-bold">{profile.name || 'Athlete'}</h1>
         <p className="text-xs opacity-60 mt-1">{profile.age} yrs · {profile.gender} · {actLabels[profile.activity_level]}</p>
         <div className="grid grid-cols-3 gap-2 mt-4">
@@ -58,10 +59,10 @@ export default function ProfileScreen() {
       {/* AI Tips */}
       {plan.tips && plan.tips.length > 0 && (
         <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">🤖 AI Tips For You</p>
+          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3"><span className="ms ms-sm">smart_toy</span> AI Tips For You</p>
           {plan.tips.map((tip, i) => (
             <div key={i} className="flex gap-2.5 py-2.5 border-b border-cream-2 last:border-0">
-              <span className="text-teal font-bold text-sm mt-0.5">→</span>
+              <span className="text-gold-dark font-bold text-sm mt-0.5">→</span>
               <p className="text-sm text-ink/70 leading-relaxed">{tip}</p>
             </div>
           ))}
@@ -76,7 +77,7 @@ export default function ProfileScreen() {
         <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Your Plan</p>
         {planRows.map(({ icon, label, val }) => (
           <div key={label} className="flex justify-between items-center py-2.5 border-b border-cream-2 last:border-0">
-            <span className="flex items-center gap-2 text-sm text-ink/60">{icon} {label}</span>
+            <span className="flex items-center gap-2 text-sm text-ink/60"><span className="ms ms-sm" style={{fontSize:16}}>{icon}</span> {label}</span>
             <span className="text-sm font-bold text-ink">{val}</span>
           </div>
         ))}
@@ -87,7 +88,7 @@ export default function ProfileScreen() {
         <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Lifestyle</p>
         {profileRows.map(({ icon, label, val }) => (
           <div key={label} className="flex justify-between items-center py-2.5 border-b border-cream-2 last:border-0">
-            <span className="flex items-center gap-2 text-sm text-ink/60">{icon} {label}</span>
+            <span className="flex items-center gap-2 text-sm text-ink/60"><span className="ms ms-sm" style={{fontSize:16}}>{icon}</span> {label}</span>
             <span className="text-sm font-bold text-ink capitalize">{val}</span>
           </div>
         ))}
@@ -95,10 +96,10 @@ export default function ProfileScreen() {
 
       {/* Actions */}
       <button onClick={() => setEditing(true)} className="block w-[calc(100%-32px)] mx-4 mb-3 bg-cream-2 text-ink font-bold text-sm py-3.5 rounded-xl text-center active:opacity-70">
-        ✏️ Edit Profile & Regenerate Plan
+        <span className="ms ms-sm">edit</span> Edit Profile & Regenerate Plan
       </button>
-      <button onClick={regeneratePlan} disabled={generatingPlan} className="block w-[calc(100%-32px)] mx-4 mb-3 bg-teal-pale text-teal font-bold text-sm py-3.5 rounded-xl text-center active:opacity-70 disabled:opacity-50">
-        🤖 Regenerate Plan
+      <button onClick={regeneratePlan} disabled={generatingPlan} className="block w-[calc(100%-32px)] mx-4 mb-3 bg-gold-pale text-gold-dark font-bold text-sm py-3.5 rounded-xl text-center active:opacity-70 disabled:opacity-50">
+        <span className="ms ms-sm">smart_toy</span> Regenerate Plan
       </button>
 
       {/* Account */}
@@ -106,7 +107,7 @@ export default function ProfileScreen() {
         <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-2">Account</p>
         <p className="text-sm text-ink/40 mb-4">{user?.email}</p>
         <button onClick={signOut} className="w-full bg-cream-2 text-ink/60 font-bold text-sm py-3 rounded-xl mb-2 active:opacity-70">Sign Out</button>
-        <button onClick={() => setShowDeleteModal(true)} className="w-full bg-cream-2 text-danger font-bold text-sm py-3 rounded-xl active:opacity-70">🗑️ Delete Account</button>
+        <button onClick={() => setShowDeleteModal(true)} className="w-full bg-cream-2 text-danger font-bold text-sm py-3 rounded-xl active:opacity-70"><span className="ms ms-sm">delete</span> Delete Account</button>
       </div>
 
       {/* Delete modal */}
@@ -115,7 +116,7 @@ export default function ProfileScreen() {
           onClick={e => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}>
           <div className="bg-white rounded-t-3xl w-full max-w-[480px] mx-auto p-6 pb-10">
             <div className="text-center mb-5">
-              <div className="text-4xl mb-3">⚠️</div>
+              <div className="text-4xl mb-3"><span className="ms ms-sm">warning</span></div>
               <h2 className="text-xl font-extrabold text-ink">Delete Account?</h2>
               <p className="text-sm text-ink/50 mt-2 leading-relaxed">
                 Your account will be deactivated for <strong>3 days</strong>. Sign back in to restore everything. After 3 days, all data is permanently deleted.

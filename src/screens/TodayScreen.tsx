@@ -2,7 +2,7 @@ import { useStore } from '../store/useStore'
 import { WORKOUTS, DAYS } from '../lib/data'
 import ExerciseFigure from '../components/ExerciseFigure'
 
-export default function TodayScreen() {
+export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) => void }) {
   const { profile, plan, workoutDone, toggleExercise, startDate } = useStore()
   const now = new Date()
   const dow = now.getDay()
@@ -18,7 +18,7 @@ export default function TodayScreen() {
   const todayDate = now.toISOString().split('T')[0]
 
   return (
-    <div className="pb-24">
+    <div className="pb-20">
       {/* Hero — full bleed, edge to edge, no margins */}
       <div className="relative overflow-hidden mb-4 text-white" style={{ background: 'linear-gradient(145deg, #1A1A2E 0%, #2D3561 35%, #005F73 70%, #0A9396 100%)', paddingTop: 'env(safe-area-inset-top, 48px)', minHeight: 220 }}>
         {/* Decorative circles */}
@@ -32,9 +32,16 @@ export default function TodayScreen() {
             <p className="text-xs font-semibold tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>
               {greeting}{firstName ? `, ${firstName}` : ''}
             </p>
-            <div className="flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: '4px 12px' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94D2BD', display: 'inline-block' }} />
-              <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>Wk {weekNum}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: '4px 12px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94D2BD', display: 'inline-block' }} />
+                <span className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>Wk {weekNum}</span>
+              </div>
+              <button onClick={() => onNavigate?.('profile')}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                <span className="ms ms-sm">person</span>
+              </button>
             </div>
           </div>
 
@@ -53,15 +60,17 @@ export default function TodayScreen() {
           <div className="flex gap-2 flex-wrap">
             {dow !== 4 && (
               <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                {dow === 0 ? '🏏 Cricket' : '🏋️ Gym Day'}
+                {profile?.sport && profile.sport !== 'none' && dow === 0
+                ? <span><span className="ms ms-sm" style={{verticalAlign:'middle'}}>emoji_events</span> {profile.sport.charAt(0).toUpperCase() + profile.sport.slice(1)} Day</span>
+                : <span><span className="ms ms-sm" style={{verticalAlign:'middle'}}>fitness_center</span> Gym Day</span>}
               </span>
             )}
             <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              😴 Bed by 10:30 PM
+              <span><span className="ms ms-sm" style={{verticalAlign:'middle'}}>bedtime</span> Bed by 10:30 PM</span>
             </span>
             {dow >= 1 && dow <= 5 && (
               <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                🥛 2 glasses milk
+                <span className="ms ms-sm">water_full</span> 2 glasses milk
               </span>
             )}
           </div>
@@ -87,7 +96,7 @@ export default function TodayScreen() {
           <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-2">Calories</p>
           <p className="text-2xl font-extrabold text-ink">{plan?.calories.toLocaleString('en-IN') ?? '—'}</p>
           <p className="text-xs text-ink/40 mt-0.5">kcal target</p>
-          <p className="text-xs text-teal font-bold mt-2 uppercase tracking-wide">
+          <p className="text-xs text-gold-dark font-bold mt-2 uppercase tracking-wide">
             {plan ? (plan.calories < (plan.tdee - 100) ? 'Cut Mode' : plan.calories > (plan.tdee + 100) ? 'Bulk Mode' : 'Recomp Mode') : ''}
           </p>
         </div>
@@ -98,7 +107,7 @@ export default function TodayScreen() {
         <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Today's Workout</p>
         {!wo || dow === 4 ? (
           <div className="text-center py-8">
-            <div className="text-4xl mb-3">🌿</div>
+            <div className="text-4xl mb-3"><span className="ms ms-sm">spa</span></div>
             <p className="text-sm text-ink/50">Rest day. Light walk only.</p>
             <p className="text-xs text-ink/30 mt-1">This is when muscles repair.</p>
           </div>
@@ -106,7 +115,7 @@ export default function TodayScreen() {
           <>
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs text-ink/40">{doneCount}/{total} done today</span>
-              <span className="text-xs font-bold text-teal">{Math.round(total ? doneCount / total * 100 : 0)}%</span>
+              <span className="text-xs font-bold text-gold-dark">{Math.round(total ? doneCount / total * 100 : 0)}%</span>
             </div>
             <div className="bg-cream-2 rounded-full h-1.5 overflow-hidden mb-4">
               <div className="bg-gradient-to-r from-teal to-blue-light h-full rounded-full transition-all duration-500" style={{ width: `${total ? doneCount / total * 100 : 0}%` }} />
@@ -116,16 +125,16 @@ export default function TodayScreen() {
                 <button
                   key={i}
                   onClick={() => toggleExercise(todayDate, i)}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left ${done[i] ? 'bg-teal-pale' : 'bg-cream'}`}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left ${done[i] ? 'bg-gold-pale' : 'bg-cream'}`}
                 >
                   <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
-                    <ExerciseFigure anim={ex.anim} color={done[i] ? '#0A9396' : '#1A1A2E'} />
+                    <ExerciseFigure anim={ex.anim} color={done[i] ? '#C9A96E' : '#2A1F14'} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-ink">{ex.n}</p>
                     <p className="text-xs text-ink/40 mt-0.5">{ex.s}</p>
                   </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all ${done[i] ? 'bg-teal border-teal text-white' : 'border-cream-3'}`}>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all ${done[i] ? 'bg-teal border-gold text-white' : 'border-cream-3'}`}>
                     {done[i] && '✓'}
                   </div>
                 </button>

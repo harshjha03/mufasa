@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { searchFoods } from '../lib/foodDb'
-import { searchFoodAI } from '../lib/aiFood'
+import { searchFoodAI, searchFoodWeb } from '../lib/aiFood'
 import type { FoodItem, FoodLog } from '../types'
 
 const MEAL_SLOTS = [
-  { id: 'breakfast', label: 'Breakfast', icon: '🌅' },
-  { id: 'lunch', label: 'Lunch', icon: '☀️' },
-  { id: 'snack', label: 'Snack', icon: '🍎' },
-  { id: 'dinner', label: 'Dinner', icon: '🌙' },
-  { id: 'night', label: 'Night', icon: '😴' },
+  { id: 'breakfast', label: 'Breakfast', icon: 'wb_twilight' },
+  { id: 'lunch', label: 'Lunch', icon: 'wb_sunny' },
+  { id: 'snack', label: 'Snack', icon: 'nutrition' },
+  { id: 'dinner', label: 'Dinner', icon: 'dinner_dining' },
+  { id: 'night', label: 'Night', icon: 'bedtime' },
 ] as const
 
 type MealSlot = typeof MEAL_SLOTS[number]['id']
@@ -21,7 +21,8 @@ export default function NutritionScreen() {
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<FoodItem[]>([])
-  const [aiSearching, setAiSearching] = useState(false)
+  const [webSearching, setWebSearching] = useState(false)
+  const [webSearched, setWebSearched] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -30,21 +31,34 @@ export default function NutritionScreen() {
 
   useEffect(() => { loadFoodLogs(today) }, [today])
 
-  // Search with debounce — local first, AI fallback
+  // Search with debounce — local DB only, web search on user request
   useEffect(() => {
+    setWebSearched(false)
+    setWebSearching(false)
     if (!searchQuery.trim()) { setSearchResults(searchFoods('')); return }
     clearTimeout(searchTimeout.current)
-    searchTimeout.current = setTimeout(async () => {
+    searchTimeout.current = setTimeout(() => {
       const local = searchFoods(searchQuery)
       setSearchResults(local)
-      if (local.length < 3) {
-        setAiSearching(true)
-        const ai = await searchFoodAI(searchQuery)
-        setSearchResults([...local, ...ai].slice(0, 8))
-        setAiSearching(false)
-      }
-    }, 500)
+    }, 300)
   }, [searchQuery])
+
+  const handleWebSearch = async () => {
+    if (!searchQuery.trim() || webSearching) return
+    setWebSearching(true)
+    try {
+      const results = await searchFoodWeb(searchQuery)
+      const local = searchFoods(searchQuery)
+      const combined = [...local, ...results]
+      setSearchResults(combined)
+      setWebSearched(true)
+    } catch(e) {
+      console.error('Web search failed:', e)
+      setWebSearched(true)
+    } finally {
+      setWebSearching(false)
+    }
+  }
 
   const todayLogs = foodLogs.filter(f => f.date === today)
   const totalCal = todayLogs.reduce((s, f) => s + f.calories * (f.quantity || 1), 0)
@@ -79,15 +93,15 @@ export default function NutritionScreen() {
   const meals = plan?.meals ?? []
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-12 pb-3">
+    <div className="pb-20">
+      <div className="px-4 pt-8 pb-3">
         <h1 className="font-serif text-3xl font-bold text-ink">Nutrition</h1>
         {/* Tab switcher */}
         <div className="flex gap-1 bg-cream-2 p-1 rounded-xl mt-3">
-          {([['plan', '📋 Plan'], ['log', '📝 Log']] as const).map(([id, label]) => (
+          {([['plan', 'Plan', 'assignment'], ['log', 'Log', 'edit_note']] as const).map(([id, label, icon]) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${tab === id ? 'bg-white text-ink shadow-sm' : 'text-ink/40'}`}>
-              {label}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${tab === id ? 'bg-white text-ink shadow-sm' : 'text-ink/40'}`}>
+              <span className="ms ms-sm" style={{fontSize:14}}>{icon}</span>{label}
             </button>
           ))}
         </div>
@@ -97,7 +111,7 @@ export default function NutritionScreen() {
       {tab === 'plan' && (
         <>
           {/* Daily total */}
-          <div className="mx-4 mb-3 rounded-card p-5 text-white" style={{ background: 'linear-gradient(135deg, #005F73, #0A9396)' }}>
+          <div className="mx-4 mb-3 rounded-card p-5 text-white" style={{ background: 'linear-gradient(135deg, #3D2E1C, #C9A96E)' }}>
             <p className="text-xs font-bold tracking-widest opacity-60 uppercase mb-3">Daily Targets — Weekday</p>
             <div className="flex gap-5 flex-wrap">
               {[
@@ -136,11 +150,11 @@ export default function NutritionScreen() {
               </div>
               {openMeal === idx && (
                 <div className="border-t border-cream-2">
-                  <p className="px-5 py-3 text-xs font-bold tracking-widest text-teal uppercase">Swap Options</p>
+                  <p className="px-5 py-3 text-xs font-bold tracking-widest text-gold-dark uppercase">Swap Options</p>
                   {m.swaps.map((sw, si) => (
                     <div key={si} className="flex justify-between items-start px-5 py-3 border-b border-cream-2 last:border-0">
                       <div><p className="text-sm font-semibold text-ink">{sw.name}</p><p className="text-xs text-ink/40 mt-0.5">{sw.macros}</p></div>
-                      <span className="bg-teal-pale text-teal text-xs font-bold px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">{sw.badge}</span>
+                      <span className="bg-gold-pale text-gold-dark text-xs font-bold px-2.5 py-1 rounded-full ml-3 whitespace-nowrap">{sw.badge}</span>
                     </div>
                   ))}
                 </div>
@@ -182,7 +196,7 @@ export default function NutritionScreen() {
               <div className="relative w-20 h-20 flex-shrink-0">
                 <svg width="80" height="80" viewBox="0 0 80 80" style={{ transform: 'rotate(-90deg)' }}>
                   <circle cx="40" cy="40" r="32" fill="none" stroke="#EDE9E1" strokeWidth="8" />
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="#0A9396" strokeWidth="8"
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="#C9A96E" strokeWidth="8"
                     strokeDasharray={`${2 * Math.PI * 32}`}
                     strokeDashoffset={`${2 * Math.PI * 32 * (1 - calPct / 100)}`}
                     strokeLinecap="round" />
@@ -209,7 +223,7 @@ export default function NutritionScreen() {
                     </div>
                   ))}
                 </div>
-                <p className={`text-xs font-bold mt-2 ${totalCal >= targetCal * 0.9 && totalCal <= targetCal * 1.1 ? 'text-teal' : totalCal > targetCal * 1.1 ? 'text-danger' : 'text-gold'}`}>
+                <p className={`text-xs font-bold mt-2 ${totalCal >= targetCal * 0.9 && totalCal <= targetCal * 1.1 ? 'text-gold-dark' : totalCal > targetCal * 1.1 ? 'text-danger' : 'text-gold'}`}>
                   {totalCal >= targetCal * 0.9 && totalCal <= targetCal * 1.1 ? '✓ On target' : totalCal > targetCal * 1.1 ? `↑ ${Math.round(totalCal - targetCal)} kcal over` : `↓ ${Math.round(targetCal - totalCal)} kcal remaining`}
                 </p>
               </div>
@@ -231,7 +245,7 @@ export default function NutritionScreen() {
             {MEAL_SLOTS.map(slot => (
               <button key={slot.id} onClick={() => setSelectedSlot(slot.id)}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${selectedSlot === slot.id ? 'bg-ink-2 border-ink-2 text-white' : 'bg-white border-cream-3 text-ink/50'}`}>
-                {slot.icon} {slot.label}
+                <span className="ms ms-sm" style={{fontSize:13}}>{slot.icon}</span> {slot.label}
               </button>
             ))}
           </div>
@@ -239,7 +253,7 @@ export default function NutritionScreen() {
           {/* Add food button */}
           <div className="mx-4 mb-3">
             <button onClick={() => { setShowAddModal(true); setSearchResults(searchFoods('')) }}
-              className="w-full bg-teal text-white font-bold text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 active:opacity-80">
+              className="w-full bg-gold text-ink font-bold text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 active:opacity-80">
               <span className="text-lg">+</span> Log food for {MEAL_SLOTS.find(s => s.id === selectedSlot)?.label}
             </button>
           </div>
@@ -252,7 +266,7 @@ export default function NutritionScreen() {
             return (
               <div key={slot.id} className="bg-white rounded-card shadow-card mx-4 mb-3 overflow-hidden">
                 <div className="flex justify-between items-center px-5 py-3 border-b border-cream-2">
-                  <span className="text-sm font-bold text-ink">{slot.icon} {slot.label}</span>
+                  <span className="text-sm font-bold text-ink"><span className="ms ms-sm" style={{fontSize:13}}>{slot.icon}</span> {slot.label}</span>
                   <span className="text-xs font-bold text-ink/40">{Math.round(slotCal)} kcal</span>
                 </div>
                 {slotLogs.map(log => (
@@ -299,20 +313,19 @@ export default function NutritionScreen() {
                   {/* Search bar */}
                   <div className="relative mb-3">
                     <input
-                      className="w-full bg-white border-2 border-cream-3 focus:border-teal text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
+                      className="w-full bg-white border-2 border-cream-3 focus:border-gold text-ink text-sm px-4 py-3 rounded-xl outline-none transition-colors"
                       placeholder="Search food... e.g. dal, chicken, banana"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       autoFocus
                     />
-                    {aiSearching && <span className="absolute right-3 top-3 text-xs text-teal">🤖 searching...</span>}
                   </div>
 
                   {/* Search results */}
                   <div className="flex flex-col gap-2">
                     {searchResults.map(food => (
                       <button key={food.id} onClick={() => setSelectedFood(food)}
-                        className="flex justify-between items-center bg-white p-4 rounded-xl border border-cream-3 text-left active:bg-teal-pale transition-all">
+                        className="flex justify-between items-center bg-white p-4 rounded-xl border border-cream-3 text-left active:bg-gold-pale transition-all">
                         <div>
                           <p className="text-sm font-bold text-ink">{food.name}</p>
                           <p className="text-xs text-ink/40 mt-0.5">{food.serving_label} · {food.serving_grams}g</p>
@@ -323,8 +336,20 @@ export default function NutritionScreen() {
                         </div>
                       </button>
                     ))}
-                    {searchResults.length === 0 && searchQuery && !aiSearching && (
-                      <p className="text-center text-sm text-ink/40 py-4">No results — try a different term</p>
+                    {/* Search Web button — always visible when query exists */}
+                    {searchQuery.trim() && (
+                      <button onClick={handleWebSearch} disabled={webSearching || webSearched}
+                        className={`w-full flex items-center justify-center gap-2 py-3 mt-2 rounded-xl border-2 text-sm font-bold transition-all ${webSearched ? 'border-gold-pale bg-gold-pale text-gold-dark' : 'border-cream-3 text-ink/50 active:bg-cream-2'} disabled:cursor-default`}>
+                        {webSearching
+                          ? <><span className="ms ms-sm" style={{fontSize:16}}>hourglass_empty</span> Searching web...</>
+                          : webSearched
+                          ? <><span className="ms ms-sm" style={{fontSize:16}}>check_circle</span> Web results loaded</>
+                          : <><span className="ms ms-sm" style={{fontSize:16}}>public</span> Search Web for "{searchQuery}"</>
+                        }
+                      </button>
+                    )}
+                    {searchResults.length === 0 && searchQuery && !webSearching && (
+                      <p className="text-center text-sm text-ink/40 py-3">No local results — tap Search Web above</p>
                     )}
                   </div>
                 </>
@@ -340,15 +365,15 @@ export default function NutritionScreen() {
                   <div className="flex gap-2 mb-4 flex-wrap">
                     {[0.5, 1, 1.5, 2, 3].map(q => (
                       <button key={q} onClick={() => setQuantity(q)}
-                        className={`px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all ${quantity === q ? 'bg-teal border-teal text-white' : 'bg-white border-cream-3 text-ink/60'}`}>
+                        className={`px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all ${quantity === q ? 'bg-teal border-gold text-white' : 'bg-white border-cream-3 text-ink/60'}`}>
                         {q === 0.5 ? '½' : q}×
                       </button>
                     ))}
                   </div>
 
                   {/* Macro preview */}
-                  <div className="bg-teal-pale rounded-xl p-4 mb-4">
-                    <p className="text-xs font-bold text-teal uppercase tracking-wide mb-2">You'll log</p>
+                  <div className="bg-gold-pale rounded-xl p-4 mb-4">
+                    <p className="text-xs font-bold text-gold-dark uppercase tracking-wide mb-2">You'll log</p>
                     <p className="text-sm font-semibold text-ink">{quantity === 0.5 ? 'Half' : quantity + '×'} {selectedFood.serving_label}</p>
                     <p className="text-xs text-ink/50 mt-0.5">{Math.round(selectedFood.serving_grams * quantity)}g total</p>
                     <div className="flex gap-3 mt-3">
@@ -368,7 +393,7 @@ export default function NutritionScreen() {
 
                   <div className="flex gap-2">
                     <button onClick={() => setSelectedFood(null)} className="flex-shrink-0 bg-cream-2 text-ink/60 font-bold text-sm py-3 px-5 rounded-xl">← Back</button>
-                    <button onClick={handleAddFood} className="flex-1 bg-teal text-white font-bold text-sm py-3 rounded-xl active:opacity-80">Log This →</button>
+                    <button onClick={handleAddFood} className="flex-1 bg-gold text-ink font-bold text-sm py-3 rounded-xl active:opacity-80">Log This →</button>
                   </div>
                 </div>
               )}
