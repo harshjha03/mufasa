@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import OnboardingScreen from './OnboardingScreen'
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?: () => void; onEditEnd?: () => void }) {
   const { user, profile, plan, signOut, regeneratePlan, generatingPlan, deactivateAccount } = useStore()
   const [editing, setEditing] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  if (editing) return <OnboardingScreen onDone={() => setEditing(false)} />
+  if (editing) return <OnboardingScreen onDone={() => { setEditing(false); onEditEnd?.() }} />
 
   if (!profile || !plan) return (
     <div className="pb-20 px-4 pt-8"><p className="text-ink/40 text-sm">No profile found.</p></div>
@@ -95,11 +95,10 @@ export default function ProfileScreen() {
       </div>
 
       {/* Actions */}
-      <button onClick={() => setEditing(true)} className="block w-[calc(100%-32px)] mx-4 mb-3 bg-cream-2 text-ink font-bold text-sm py-3.5 rounded-xl text-center active:opacity-70">
-        <span className="ms ms-sm">edit</span> Edit Profile & Regenerate Plan
-      </button>
-      <button onClick={regeneratePlan} disabled={generatingPlan} className="block w-[calc(100%-32px)] mx-4 mb-3 bg-gold-pale text-gold-dark font-bold text-sm py-3.5 rounded-xl text-center active:opacity-70 disabled:opacity-50">
-        <span className="ms ms-sm">smart_toy</span> Regenerate Plan
+      <button onClick={() => { setEditing(true); onEditStart?.() }}
+        className="block w-[calc(100%-32px)] mx-4 mb-3 text-white font-bold text-sm py-4 rounded-xl text-center active:opacity-80"
+        style={{background: 'linear-gradient(135deg, #2A1F14, #C9A96E)'}}>
+        <span className="ms ms-sm" style={{fontSize:16}}>edit</span> Edit Profile & Regenerate Plan
       </button>
 
       {/* Account */}

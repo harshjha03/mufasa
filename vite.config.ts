@@ -15,6 +15,7 @@ export default defineConfig({
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkOnly',
+            
           },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

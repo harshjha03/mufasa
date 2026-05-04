@@ -14,12 +14,10 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
   const today = now.toISOString().split('T')[0]
   const done = workoutDone[todayKey] || {}
 
-  // Use AI plan workout for today
   const wo = plan?.workout?.[dow]
   const total = wo?.exercises?.length ?? 0
   const doneCount = Object.values(done).filter(Boolean).length
 
-  // Today's calorie progress from food logs
   const todayLogs = foodLogs.filter(f => f.date === today)
   const caloriesLogged = Math.round(todayLogs.reduce((s, f) => s + f.calories * (f.quantity || 1), 0))
   const proteinLogged = Math.round(todayLogs.reduce((s, f) => s + f.protein * (f.quantity || 1), 0))
@@ -27,11 +25,9 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
   const targetProtein = plan?.protein ?? 0
   const calPct = targetCal ? Math.min(100, Math.round(caloriesLogged / targetCal * 100)) : 0
 
-  // Hero workout name
   const heroTitle = wo ? wo.name : 'Rest Day'
-  const heroSub = wo
-    ? `${total} exercises · ${doneCount}/${total} done`
-    : 'Light walk only — muscles repair today'
+  const heroSub = wo ? `${total} exercises · ${doneCount}/${total} done` : 'Light walk only — muscles repair today'
+  const mode = plan ? (plan.calories < (plan.tdee - 100) ? 'Cut' : plan.calories > (plan.tdee + 100) ? 'Bulk' : 'Recomp') : ''
 
   return (
     <div className="pb-20">
@@ -40,12 +36,10 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
         background: 'linear-gradient(145deg, #2A1F14 0%, #4A3520 35%, #7A5C2E 70%, #C9A96E 100%)',
         paddingTop: 'env(safe-area-inset-top, 48px)', minHeight: 220
       }}>
-        {/* Decorative circles */}
         <div className="absolute" style={{ top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,169,110,0.2), transparent 70%)' }} />
         <div className="absolute" style={{ bottom: -40, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%)' }} />
 
         <div className="relative px-5 pb-6 pt-2">
-          {/* Greeting row */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>
               {greeting}{firstName ? `, ${firstName}` : ''}
@@ -63,14 +57,12 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
             </div>
           </div>
 
-          {/* Workout name — replaces day name */}
-          <h1 className="font-serif font-bold leading-none mb-1" style={{ fontSize: 40, letterSpacing: -0.5 }}>{heroTitle}</h1>
+          <h1 className="font-extrabold leading-none mb-1" style={{ fontSize: 36, letterSpacing: -0.5 }}>{heroTitle}</h1>
           <p className="font-semibold mb-1" style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{heroSub}</p>
           <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
 
-          {/* Badges — calorie progress replaces milk */}
           <div className="flex gap-2 flex-wrap">
             <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)' }}>
               <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>fitness_center</span>
@@ -80,46 +72,56 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
               <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>bedtime</span>
               {' '}Bed by {profile?.sleep_time || '10:30 PM'}
             </span>
-            {/* Calorie progress badge */}
             <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{
               background: calPct >= 90 ? 'rgba(201,169,110,0.3)' : 'rgba(255,255,255,0.12)',
               backdropFilter: 'blur(8px)',
               border: `1px solid ${calPct >= 90 ? 'rgba(201,169,110,0.5)' : 'rgba(255,255,255,0.15)'}`
             }}>
               <span className="ms ms-sm" style={{fontSize:13, verticalAlign:'middle'}}>restaurant</span>
-              {' '}{caloriesLogged > 0 ? `${caloriesLogged} / ${targetCal} kcal · ${proteinLogged}g P` : `${targetCal} kcal target`}
+              {' '}{caloriesLogged > 0 ? `${caloriesLogged} / ${targetCal} kcal` : `${targetCal} kcal target`}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Macro targets */}
-      <div className="flex gap-3 mx-4 mb-3">
-        <div className="flex-1 bg-white rounded-xl shadow-card p-4">
-          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-2">Protein</p>
-          <p className="text-2xl font-extrabold text-ink">{proteinLogged > 0 ? proteinLogged : plan?.protein ?? '—'}g</p>
-          <p className="text-xs text-ink/40 mt-0.5">{proteinLogged > 0 ? `of ${targetProtein}g target` : 'Daily target'}</p>
-          {proteinLogged > 0 && (
-            <div className="bg-cream-2 rounded-full h-1 mt-2 overflow-hidden">
-              <div className="bg-teal h-full rounded-full" style={{ width: `${Math.min(100, proteinLogged / targetProtein * 100)}%` }} />
+      {/* Unified macro card */}
+      <div className="mx-4 mb-3 bg-white rounded-xl shadow-card p-4">
+        <div className="flex justify-end mb-3">
+          {mode && <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-gold-pale text-gold-dark">{mode} Mode</span>}
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { val: caloriesLogged > 0 ? caloriesLogged.toLocaleString('en-IN') : (plan?.calories.toLocaleString('en-IN') ?? '—'), label: 'kcal', color: 'text-ink', sub: caloriesLogged > 0 ? `/${plan?.calories}` : 'target' },
+            { val: caloriesLogged > 0 ? `${proteinLogged}g` : `${plan?.protein ?? '—'}g`, label: 'Protein', color: 'text-teal-dark', sub: caloriesLogged > 0 ? `/${plan?.protein}g` : 'target' },
+            { val: `${plan?.carbs ?? '—'}g`, label: 'Carbs', color: 'text-blue', sub: 'target' },
+            { val: `${plan?.fat ?? '—'}g`, label: 'Fat', color: 'text-gold-dark', sub: 'target' },
+          ].map(({ val, label, color, sub }) => (
+            <div key={label} className="text-center">
+              <p className={`text-base font-extrabold ${color}`}>{val}</p>
+              <p className="text-xs text-ink/30 mt-0.5">{label}</p>
+              {caloriesLogged > 0 && <p className="text-xs text-ink/20">{sub}</p>}
             </div>
-          )}
+          ))}
         </div>
-        <div className="flex-[0.8] bg-white rounded-xl shadow-card p-4">
-          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-2">Calories</p>
-          <p className="text-2xl font-extrabold text-ink">{caloriesLogged > 0 ? caloriesLogged.toLocaleString('en-IN') : plan?.calories.toLocaleString('en-IN') ?? '—'}</p>
-          <p className="text-xs text-ink/40 mt-0.5">{caloriesLogged > 0 ? `of ${targetCal.toLocaleString('en-IN')}` : 'kcal target'}</p>
-          <p className="text-xs text-gold-dark font-bold mt-1 uppercase tracking-wide">
-            {plan ? (plan.calories < (plan.tdee - 100) ? 'Cut' : plan.calories > (plan.tdee + 100) ? 'Bulk' : 'Recomp') : ''}
-          </p>
-        </div>
+        {caloriesLogged > 0 && (
+          <div className="mt-3">
+            <div className="bg-cream-2 rounded-full h-1.5 overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${calPct}%`, background: 'linear-gradient(90deg, #C9A96E, #A07840)' }} />
+            </div>
+            <p className="text-xs text-ink/30 mt-1">{calPct}% of daily target</p>
+          </div>
+        )}
       </div>
 
-      {/* Today workout */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Today's Workout</p>
+      {/* Today workout — tappable → workout tab */}
+      <button className="bg-white rounded-card shadow-card mx-4 mb-3 p-5 text-left w-[calc(100%-32px)] active:opacity-80"
+        onClick={() => onNavigate?.('workout')}>
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase">Today's Workout</p>
+          <span className="ms ms-sm text-ink/20" style={{fontSize:16}}>chevron_right</span>
+        </div>
         {!wo ? (
-          <div className="text-center py-8">
+          <div className="text-center py-6">
             <span className="ms ms-xl text-gold/30 block mb-3">self_improvement</span>
             <p className="text-sm text-ink/50">Rest day — Recover Strong</p>
             <p className="text-xs text-ink/30 mt-1">Muscles grow during rest, not during training.</p>
@@ -135,8 +137,8 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
             </div>
             <div className="flex flex-col gap-2">
               {wo.exercises.slice(0, 4).map((ex, i) => (
-                <button key={i} onClick={() => toggleExercise(today, i)}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left ${done[i] ? 'bg-gold-pale' : 'bg-cream'}`}>
+                <div key={i} onClick={e => { e.stopPropagation(); toggleExercise(today, i) }}
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all text-left cursor-pointer ${done[i] ? 'bg-gold-pale' : 'bg-cream'}`}>
                   <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
                     <ExerciseFigure anim={ex.anim} color={done[i] ? '#C9A96E' : '#2A1F14'} />
                   </div>
@@ -147,17 +149,25 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs transition-all ${done[i] ? 'border-gold bg-gold text-white' : 'border-cream-3'}`}>
                     {done[i] && '✓'}
                   </div>
-                </button>
+                </div>
               ))}
-              {total > 4 && <p className="text-center text-xs text-ink/30 py-2">+{total - 4} more — see Workout tab</p>}
+              {total > 4 && <p className="text-center text-xs text-ink/30 py-2">+{total - 4} more exercises</p>}
+            </div>
+            <div className="mt-3 pt-3 border-t border-cream-2 flex items-center justify-between">
+              <span className="text-xs font-bold text-gold-dark">View full workout</span>
+              <span className="ms ms-sm text-gold-dark" style={{fontSize:16}}>arrow_forward</span>
             </div>
           </>
         )}
-      </div>
+      </button>
 
-      {/* Today meals */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Today's Meals</p>
+      {/* Today meals — tappable → nutrition tab */}
+      <button className="bg-white rounded-card shadow-card mx-4 mb-3 p-5 text-left w-[calc(100%-32px)] active:opacity-80"
+        onClick={() => onNavigate?.('nutrition')}>
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase">Today's Meals</p>
+          <span className="ms ms-sm text-ink/20" style={{fontSize:16}}>chevron_right</span>
+        </div>
         <div className="divide-y divide-cream-2">
           {(plan?.meals ?? []).map((m, i) => (
             <div key={i} className="flex gap-3 py-2.5">
@@ -169,18 +179,33 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
             </div>
           ))}
         </div>
-      </div>
+        <div className="mt-3 pt-3 border-t border-cream-2 flex items-center justify-between">
+          <span className="text-xs font-bold text-gold-dark">Log today's food</span>
+          <span className="ms ms-sm text-gold-dark" style={{fontSize:16}}>arrow_forward</span>
+        </div>
+      </button>
 
-      {/* Avoid */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Avoid Today</p>
-        {['Sugary drinks — Coke, Pepsi, packaged juice', 'Office biscuits & namkeen at desk', 'Maida — samosa, pav, kachori', 'Heavy meals after 10 PM', 'Alcohol'].map((item, i) => (
-          <div key={i} className="flex gap-3 py-2 border-b border-cream-2 last:border-0 items-center">
-            <span className="text-danger font-black text-lg leading-none">×</span>
-            <span className="text-sm text-ink/70">{item}</span>
+      {/* 5 Rules — moved from WorkoutScreen */}
+      <div className="bg-ink-2 rounded-card mx-4 mb-3 p-5">
+        <p className="text-xs font-bold tracking-widest text-white/40 uppercase mb-4">5 Rules That Override Everything</p>
+        {[
+          { n: 1, title: 'Sleep 8 hrs', desc: 'In bed by 10:30 PM. Growth happens at night, not the gym.' },
+          { n: 2, title: 'Progressive overload every week', desc: 'One more rep or more weight. No progression = no change.' },
+          { n: 3, title: 'Never skip legs', desc: 'Your back, knees, bowling pace — all depend on it.' },
+          { n: 4, title: 'Protein in every meal', desc: 'If a meal has no protein source, fix it.' },
+          { n: 5, title: '12 weeks minimum', desc: "Most people quit at week 3. Don't be that guy." },
+        ].map(({ n, title, desc }) => (
+          <div key={n} className="flex gap-4 py-3 border-b border-white/10 last:border-0">
+            <span className="text-gold-dark font-extrabold text-sm w-4 flex-shrink-0 mt-0.5">{n}</span>
+            <div>
+              <p className="text-sm font-bold text-white">{title}</p>
+              <p className="text-xs text-white/40 mt-0.5 leading-relaxed">{desc}</p>
+            </div>
           </div>
         ))}
       </div>
+
+
     </div>
   )
 }

@@ -45,6 +45,7 @@ export default function App() {
   const { user, profile, plan, loading, generatingPlan } = useStore()
   const [screen, setScreen] = useState('today')
   const [showLanding, setShowLanding] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const navigate = (s: string) => {
@@ -87,21 +88,24 @@ export default function App() {
     </div>
   )
 
-  const screens: Record<string, JSX.Element> = {
-    today: <TodayScreen onNavigate={navigate} />,
-    workout: <WorkoutScreen />,
-    nutrition: <NutritionScreen />,
-    progress: <ProgressScreen />,
-    expenses: <ExpensesScreen />,
-    profile: <ProfileScreen />,
+  const renderScreen = () => {
+    switch(screen) {
+      case 'today': return <TodayScreen onNavigate={navigate} />
+      case 'workout': return <WorkoutScreen />
+      case 'nutrition': return <NutritionScreen />
+      case 'progress': return <ProgressScreen />
+      case 'expenses': return <ExpensesScreen />
+      case 'profile': return <ProfileScreen onEditStart={() => setIsEditing(true)} onEditEnd={() => setIsEditing(false)} />
+      default: return <TodayScreen onNavigate={navigate} />
+    }
   }
 
   return (
     <div className="max-w-[480px] mx-auto bg-cream relative" style={{ height: '100dvh', overflow: 'hidden' }}>
-      <div ref={scrollRef} className="overflow-y-auto overflow-x-hidden" style={{ height: 'calc(100dvh - 64px)' }}>
-        {screens[screen] ?? <TodayScreen />}
+      <div ref={scrollRef} className="overflow-y-auto overflow-x-hidden" style={{ height: isEditing ? '100dvh' : 'calc(100dvh - 64px)' }}>
+        {renderScreen()}
       </div>
-      <BottomNav active={screen} onChange={navigate} />
+      {!isEditing && <BottomNav active={screen} onChange={navigate} />}
       <InstallBanner />
     </div>
   )

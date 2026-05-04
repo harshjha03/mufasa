@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { User } from '@supabase/supabase-js'
 import type { Profile, AIPlan, WeightEntry, Expense, WorkoutDone, FoodLog } from '../types'
 import { sb } from '../lib/supabase'
-import { generateAIPlan } from '../lib/gemini'
+import { generateAIPlan, calcMacros } from '../lib/gemini'
 import { estimateBudgetAI } from '../lib/aiFood'
 
 interface AppState {
@@ -179,11 +179,39 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   logWeight: async (weight) => {
-    const { user, weightLog } = get(); if (!user) return
+    const { user, weightLog, profile, plan } = get(); if (!user) return
     const date = new Date().toISOString().split('T')[0]
     await sb.from('weight_log').upsert({ user_id: user.id, date, weight }, { onConflict: 'user_id,date' })
     const updated = [...weightLog.filter(e => e.date !== date), { date, weight }].sort((a, b) => a.date.localeCompare(b.date))
     set({ weightLog: updated, startDate: updated[0]?.date ?? date })
+
+    // Update profile weight and recalculate macros if weight changed by more than 1kg
+    if (profile && plan && Math.abs(weight - profile.weight) >= 1) {
+      const updatedProfile = { ...profile, weight }
+
+      // Update profile in DB
+      await sb.from('profiles').update({ weight, updated_at: new Date().toISOString() }).eq('user_id', user.id)
+      set({ profile: updatedProfile })
+
+      // Recalculate macros with new weight
+      if (calcMacros) {
+        const newMacros = calcMacros(updatedProfile)
+        const updatedPlan = {
+          ...plan,
+          bmr: newMacros.bmr,
+          tdee: newMacros.tdee,
+          calories: newMacros.calories,
+          protein: newMacros.protein,
+          carbs: newMacros.carbs,
+          fat: newMacros.fat,
+          bmi: newMacros.bmi,
+          bmiCat: newMacros.bmiCat,
+          weightTarget: newMacros.weightTarget,
+        }
+        await sb.from('ai_plans').update({ plan: updatedPlan, updated_at: new Date().toISOString() }).eq('user_id', user.id)
+        set({ plan: updatedPlan })
+      }
+    }
   },
 
   toggleExercise: async (date, index) => {

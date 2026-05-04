@@ -102,7 +102,7 @@ export async function estimateBudgetAI(profile: Profile, monthlyBudget: number):
 
   // Food items based on diet and remaining budget
   const dietType = profile.diet_type || 'non_vegetarian'
-  if (dietType === 'non_vegetarian' || dietType === 'eggetarian') {
+  if (dietType === 'non_vegetarian' || (dietType as string) === 'eggetarian') {
     items.push({ name: 'Eggs (6/day)', estimated_price: Math.round(foodCost * 0.35), monthly_qty: '~180 eggs', category: 'food' })
     if (dietType === 'non_vegetarian') {
       items.push({ name: 'Chicken breast', estimated_price: Math.round(foodCost * 0.3), monthly_qty: '~3kg/week', category: 'food' })

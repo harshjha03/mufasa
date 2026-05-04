@@ -336,8 +336,12 @@ export default function OnboardingScreen({ onDone }: Props) {
 
   return (
     <div className="fixed inset-0 bg-cream flex flex-col items-center px-6 py-8 overflow-y-auto z-50 pt-10">
-      <div className="font-serif text-3xl text-ink mb-1">Mu<span className="text-gold-dark">fasa</span></div>
-      <p className="text-xs text-ink/40 mb-6">{onDone ? 'Update your profile' : 'AI-powered personalised plan'}</p>
+      {!onDone && (
+        <div className="text-center mb-6">
+          <div className="font-serif text-3xl text-ink mb-1">Mu<span className="text-gold-dark">fasa</span></div>
+          <p className="text-xs text-ink/40">AI-powered personalised plan</p>
+        </div>
+      )}
       <div className="bg-white rounded-card shadow-lg p-6 w-full max-w-sm">
         <div className="flex gap-1.5 justify-center mb-2">
           {Array.from({ length: TOTAL_STEPS }, (_, i) => (
