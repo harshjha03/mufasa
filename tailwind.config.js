@@ -40,6 +40,7 @@ export default {
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         sans:  ['Outfit', 'system-ui', 'sans-serif'],
+        cinzel: ['"Cinzel"', 'Georgia', 'serif'],
       },
       borderRadius: {
         'card': '20px',

@@ -10,7 +10,7 @@ export default function LandingScreen({ onGetStarted }: Props) {
       {/* Hero */}
       <div className="flex flex-col items-center pt-16 pb-10 px-6 text-center">
         <img src="/icon-512.png" alt="Mufasa" className="w-28 h-28 rounded-3xl mb-6 shadow-2xl" />
-        <h1 className="font-serif text-5xl text-white font-bold mb-3">Mufasa</h1>
+        <h1 className="text-white mb-3" style={{fontFamily: "Cinzel, serif", fontSize: 52, fontWeight: 900, letterSpacing: 6}}>MUFASA</h1>
         <p className="text-lg text-white/60 mb-8 leading-relaxed">Your AI-powered<br />personal fitness coach</p>
         <button onClick={onGetStarted}
           className="w-full max-w-xs bg-gold text-ink font-extrabold text-base py-4 rounded-2xl shadow-lg active:opacity-80 mb-3">

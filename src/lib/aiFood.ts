@@ -37,13 +37,13 @@ export async function searchFoodAI(query: string): Promise<FoodItem[]> {
   return _searchFood(query, false)
 }
 
-// ── WEB FOOD SEARCH (live internet search) ──
+// ── WEB FOOD SEARCH (falls back to AI without web) ──
 export async function searchFoodWeb(query: string): Promise<FoodItem[]> {
-  return _searchFood(query, true)
+  return _searchFood(query, false)
 }
 
-async function _searchFood(query: string, useWeb: boolean): Promise<FoodItem[]> {
-  const prompt = `${useWeb ? 'Search the web for nutritional information about: ' : 'You are a nutritionist with knowledge of Indian foods. A user searched for: '}"${query}"
+async function _searchFood(query: string, _useWeb: boolean): Promise<FoodItem[]> {
+  const prompt = `'You are a nutritionist with knowledge of Indian foods. A user searched for: '"${query}"
 
 Return ONLY a JSON array of up to 6 food items with accurate nutritional data. No markdown, no explanation, just the array.
 Each item must follow this exact format:
@@ -65,11 +65,11 @@ Rules:
 - Use Indian serving sizes where applicable (katori, roti, glass, piece, tbsp, scoop)
 - For branded/packaged foods use per-pack or per-serving as labelled
 - All macro values per one serving
-- Be accurate — use real nutritional data${useWeb ? ' from the web search results' : ''}
+- Be accurate — use real nutritional data
 - category must be one of: Grains, Lentils, Dairy, Eggs, Meat, Vegetables, Fruits, Snacks, Supplements, Drinks, Meals, FastFood`
 
   try {
-    const raw = await callGemini(prompt, useWeb)
+    const raw = await callGroq(prompt)
     const cleaned = raw.replace(/\`\`\`json\n?/g, '').replace(/\`\`\`\n?/g, '').trim()
     const start = cleaned.indexOf('[')
     const end = cleaned.lastIndexOf(']')

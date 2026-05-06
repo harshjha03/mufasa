@@ -92,16 +92,28 @@ CALCULATED NUTRITION TARGETS (use these exact numbers):
 - Protein: ${macros.protein}g, Carbs: ${macros.carbs}g, Fat: ${macros.fat}g
 - TDEE: ${macros.tdee} kcal
 
-INSTRUCTIONS:
-1. Generate a meal plan with 6 meals timed around their wake/sleep schedule
-2. Meal foods MUST match their diet type: vegetarian gets no meat/eggs, eggetarian gets eggs but no meat, vegan gets no animal products, non-vegetarian can have all
-3. Generate a workout split appropriate for their level and goal (${macros.workoutLevel})
-4. If gym_access is 'home', use ONLY dumbbell/band exercises — no barbells, cables, or machines
-5. If gym_access is 'none', use ONLY bodyweight exercises
-6. If they play a sport (not 'none'), include a sport-specific protocol for THAT sport — not cricket unless they selected cricket
-7. All food should be practical Indian food available in India
-8. Workout exercises must use one of these animation types: press, pull, squat, curl, raise, hinge, rotate, run, plank, row
-9. Budget awareness: if monthly_budget < 3000, do NOT recommend supplements — focus on whole food protein sources only. If no gym access, remove gym membership from any cost estimates.
+STRICT RULES — FOLLOW EXACTLY:
+
+WORKOUT RULES:
+- gym_access = 'full_gym': Use barbell, cable, machine exercises (Bench Press, Lat Pulldown, Leg Press etc.)
+- gym_access = 'home': Use ONLY dumbbell and bodyweight exercises. NO barbells, NO cables, NO machines. Examples: Dumbbell Press, Dumbbell Row, Push-ups, Pull-ups
+- gym_access = 'none': Use ONLY bodyweight exercises. NO equipment whatsoever. Examples: Push-ups, Pull-ups, Squats, Lunges, Plank
+- VIOLATION: Recommending gym exercises when gym_access is 'home' or 'none' is a critical error
+
+NUTRITION RULES:
+- diet_type = 'vegetarian': NO meat, NO eggs. Use dal, paneer, milk, curd, legumes
+- diet_type = 'eggetarian': NO meat. Eggs are ok. Use eggs, dal, paneer, milk
+- diet_type = 'vegan': NO animal products at all. Use dal, tofu, plant milk, legumes
+- diet_type = 'non_vegetarian': All foods ok including chicken, eggs, fish
+
+BUDGET RULES:
+- monthly_budget < 3000: NO supplements (no whey, no creatine). Use whole food protein only
+- gym_access != 'full_gym': NO gym membership in budget
+
+GENERAL:
+- Generate a meal plan with 6 meals timed around their wake/sleep schedule
+- All food must be practical Indian food available in India
+- Workout exercises must use animation type from: press, pull, squat, curl, raise, hinge, rotate, run, plank, row
 
 Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just the JSON.
 
