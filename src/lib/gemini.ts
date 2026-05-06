@@ -1,6 +1,6 @@
 import type { Profile, AIPlan, Meal, Exercise, WorkoutDay, SportProtocol } from '../types'
 
-const GEMINI_KEY = 'AIzaSyB_DNvosZuGCYPfXVOOw2S1r5l0faYvJic'
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
 
 // ── BODY TYPE DETECTION ──

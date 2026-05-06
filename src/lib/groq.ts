@@ -1,7 +1,7 @@
 import type { Profile, AIPlan, Meal, Exercise, WorkoutDay, SportProtocol } from '../types'
 import { calcMacros } from './gemini'
 
-const GROQ_KEY = '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'
+const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 const MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 

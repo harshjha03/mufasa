@@ -1,3 +1,5 @@
 node_modules
 dist
 .envgit add .gitignore
+.env
+.env.local
