@@ -2,141 +2,255 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import OnboardingScreen from './OnboardingScreen'
 
+// ── Design tokens — immersiveBronze ──────────────────────
+const TEXT    = '#FBF6EE'
+const MUTED   = 'rgba(251,246,238,0.5)'
+const FAINT   = 'rgba(251,246,238,0.22)'
+const DIVIDER = 'rgba(255,255,255,0.09)'
+const GOLD    = '#E4B26A'
+const CARD    = 'rgba(255,255,255,0.05)'
+const DANGER  = '#E05252'
+
 export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?: () => void; onEditEnd?: () => void }) {
-  const { user, profile, plan, signOut, regeneratePlan, generatingPlan, deactivateAccount } = useStore()
-  const [editing, setEditing] = useState(false)
+  const { user, profile, plan, signOut, deactivateAccount } = useStore()
+  const [editing, setEditing]             = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   if (editing) return <OnboardingScreen onDone={() => { setEditing(false); onEditEnd?.() }} />
 
   if (!profile || !plan) return (
-    <div className="pb-20 px-4 pt-8"><p className="text-ink/40 text-sm">No profile found.</p></div>
+    <div style={{ padding: '60px 20px', color: MUTED, fontSize: 14 }}>No profile found.</div>
   )
 
   const genderIcon = profile.gender === 'female' ? 'female' : profile.gender === 'male' ? 'male' : 'transgender'
-  const goalLabels = { lose: 'Lose Fat', recomp: 'Recomposition', gain: 'Build Muscle' }
-  const actLabels = { sedentary: 'Sedentary', light: 'Lightly Active', moderate: 'Moderately Active', very: 'Very Active' }
+  const goalLabels: Record<string, string> = { lose: 'Lose Fat', recomp: 'Recomposition', gain: 'Build Muscle' }
+  const actLabels: Record<string, string>  = { sedentary: 'Sedentary', light: 'Lightly Active', moderate: 'Moderately Active', very: 'Very Active' }
 
   const planRows = [
-    { icon: 'flag', label: 'Goal', val: goalLabels[profile.goal] },
+    { icon: 'flag',                  label: 'Goal',           val: goalLabels[profile.goal] },
     { icon: 'local_fire_department', label: 'Daily Calories', val: `${plan.calories.toLocaleString('en-IN')} kcal` },
-    { icon: '🥩', label: 'Protein', val: `${plan.protein}g/day` },
-    { icon: '🍚', label: 'Carbs', val: `${plan.carbs}g/day` },
-    { icon: '🫒', label: 'Fat', val: `${plan.fat}g/day` },
-    { icon: 'bar_chart', label: 'TDEE', val: `${plan.tdee} kcal` },
-    { icon: 'balance', label: 'Monthly Target', val: plan.weightTarget },
-    { icon: 'fitness_center', label: 'Level', val: plan.workoutLevel.charAt(0).toUpperCase() + plan.workoutLevel.slice(1) },
-    { icon: '📏', label: 'BMI', val: `${plan.bmi} — ${plan.bmiCat}` },
+    { icon: 'egg_alt',               label: 'Protein',        val: `${plan.protein}g/day` },
+    { icon: 'grain',                 label: 'Carbs',          val: `${plan.carbs}g/day` },
+    { icon: 'water_drop',            label: 'Fat',            val: `${plan.fat}g/day` },
+    { icon: 'bar_chart',             label: 'TDEE',           val: `${plan.tdee} kcal` },
+    { icon: 'balance',               label: 'Monthly Target', val: plan.weightTarget },
+    { icon: 'fitness_center',        label: 'Level',          val: plan.workoutLevel.charAt(0).toUpperCase() + plan.workoutLevel.slice(1) },
+    { icon: 'straighten',            label: 'BMI',            val: `${plan.bmi} — ${plan.bmiCat}` },
   ]
 
   const profileRows = [
-    { icon: 'emoji_events', label: 'Sport', val: profile.sport && profile.sport !== 'none' ? `${profile.sport}${profile.sport_frequency ? ` · ${profile.sport_frequency}` : ''}` : 'None' },
-    { icon: '🤕', label: 'Injuries', val: profile.injuries && profile.injuries !== 'none' ? profile.injuries : 'None' },
-    { icon: 'person', label: 'Body Type', val: profile.body_type ? profile.body_type.charAt(0).toUpperCase() + profile.body_type.slice(1) : 'Not set' },
-    { icon: 'schedule', label: 'Schedule', val: `${profile.wake_time || '6:00 AM'} – ${profile.sleep_time || '10:30 PM'}` },
-    { icon: 'fitness_center', label: 'Gym access', val: profile.gym_access === 'full_gym' ? 'Full gym' : profile.gym_access === 'home' ? 'Home workout' : 'No equipment' },
-    { icon: 'restaurant', label: 'Diet', val: profile.diet_type === 'vegetarian' ? 'Vegetarian' : profile.diet_type === 'vegan' ? 'Vegan' : 'Non-vegetarian' },
+    { icon: 'emoji_events',  label: 'Sport',     val: profile.sport && profile.sport !== 'none' ? `${profile.sport}${profile.sport_frequency ? ` · ${profile.sport_frequency}` : ''}` : 'None' },
+    { icon: 'healing',       label: 'Injuries',  val: profile.injuries && profile.injuries !== 'none' ? profile.injuries : 'None' },
+    { icon: 'person',        label: 'Body Type', val: profile.body_type ? profile.body_type.charAt(0).toUpperCase() + profile.body_type.slice(1) : 'Not set' },
+    { icon: 'schedule',      label: 'Schedule',  val: `${profile.wake_time || '6:00 AM'} – ${profile.sleep_time || '10:30 PM'}` },
+    { icon: 'fitness_center',label: 'Gym',       val: profile.gym_access === 'full_gym' ? 'Full gym' : profile.gym_access === 'home' ? 'Home workout' : 'No equipment' },
+    { icon: 'restaurant',    label: 'Diet',      val: profile.diet_type === 'vegetarian' ? 'Vegetarian' : profile.diet_type === 'vegan' ? 'Vegan' : 'Non-vegetarian' },
   ]
 
+  const SectionLabel = ({ children }: { children: string }) => (
+    <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55, marginBottom: 16 }}>
+      {children}
+    </p>
+  )
+
+  const Row = ({ icon, label, val, last = false }: { icon: string; label: string; val: string; last?: boolean }) => (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      paddingTop: 13, paddingBottom: 13,
+      borderBottom: last ? 'none' : `1px solid ${DIVIDER}`,
+    }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: MUTED }}>
+        <span className="ms ms-sm" style={{ fontSize: 15, color: MUTED }}>{icon}</span>
+        {label}
+      </span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, maxWidth: '55%', textAlign: 'right' }}>{val}</span>
+    </div>
+  )
+
   return (
-    <div className="pb-20">
-      {/* Hero */}
-      <div className="mx-4 mt-12 mb-3 rounded-card p-6 text-white" style={{ background: 'linear-gradient(135deg, #2A1F14, #A07840)' }}>
-        <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center mb-3"><span className="ms ms-lg text-white">{genderIcon}</span></div>
-        <h1 className="font-serif text-2xl font-bold">{profile.name || 'Athlete'}</h1>
-        <p className="text-xs opacity-60 mt-1">{profile.age} yrs · {profile.gender} · {actLabels[profile.activity_level]}</p>
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          {[{ val: `${profile.weight}kg`, label: 'Weight' }, { val: `${profile.height}cm`, label: 'Height' }, { val: plan.bmi, label: 'BMI' }].map(({ val, label }) => (
-            <div key={label} className="bg-white/10 rounded-xl p-2.5 text-center">
-              <p className="text-lg font-extrabold leading-none">{val}</p>
-              <p className="text-xs opacity-50 mt-1 uppercase tracking-wide">{label}</p>
+    <div style={{
+      minHeight: '100vh',
+      paddingBottom: 100,
+      background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Ambient glow */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
+
+      {/* ── Hero ─────────────────────────────────────────── */}
+      <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 28px) 20px 28px', position: 'relative' }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 14,
+        }}>
+          <span className="ms ms-lg" style={{ fontSize: 28, color: TEXT }}>{genderIcon}</span>
+        </div>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: TEXT, letterSpacing: '-1px', lineHeight: 1, marginBottom: 6 }}>
+          {profile.name || 'Athlete'}
+        </h1>
+        <p style={{ fontSize: 13, color: MUTED }}>
+          {profile.age} yrs · {profile.gender} · {actLabels[profile.activity_level]}
+        </p>
+
+        {/* Stat chips */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          {[
+            { val: `${profile.weight}kg`, label: 'Weight' },
+            { val: `${profile.height}cm`, label: 'Height' },
+            { val: String(plan.bmi),      label: 'BMI'    },
+          ].map(({ val, label }) => (
+            <div key={label} style={{
+              flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 14,
+              padding: '10px 0', textAlign: 'center',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <p style={{ fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{val}</p>
+              <p style={{ fontSize: 9, fontWeight: 700, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginTop: 4 }}>{label}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* AI Tips */}
+      <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
+
+      {/* ── AI Tips ──────────────────────────────────────── */}
       {plan.tips && plan.tips.length > 0 && (
-        <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-          <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3"><span className="ms ms-sm">smart_toy</span> AI Tips For You</p>
-          {plan.tips.map((tip, i) => (
-            <div key={i} className="flex gap-2.5 py-2.5 border-b border-cream-2 last:border-0">
-              <span className="text-gold-dark font-bold text-sm mt-0.5">→</span>
-              <p className="text-sm text-ink/70 leading-relaxed">{tip}</p>
-            </div>
-          ))}
-          {plan.generatedAt && (
-            <p className="text-xs text-ink/20 mt-3">Generated {new Date(plan.generatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-          )}
-        </div>
+        <>
+          <div style={{ padding: '20px 20px 24px' }}>
+            <SectionLabel>AI Tips For You</SectionLabel>
+            {plan.tips.map((tip: string, i: number) => (
+              <div key={i} style={{
+                display: 'flex', gap: 14,
+                paddingTop: 13, paddingBottom: 13,
+                borderBottom: i < plan.tips.length - 1 ? `1px solid ${DIVIDER}` : 'none',
+              }}>
+                <span style={{ color: GOLD, fontWeight: 800, fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
+                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{tip}</p>
+              </div>
+            ))}
+            {plan.generatedAt && (
+              <p style={{ fontSize: 11, color: FAINT, marginTop: 12 }}>
+                Generated {new Date(plan.generatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            )}
+          </div>
+          <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
+        </>
       )}
 
-      {/* Plan Summary */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Your Plan</p>
-        {planRows.map(({ icon, label, val }) => (
-          <div key={label} className="flex justify-between items-center py-2.5 border-b border-cream-2 last:border-0">
-            <span className="flex items-center gap-2 text-sm text-ink/60"><span className="ms ms-sm" style={{fontSize:16}}>{icon}</span> {label}</span>
-            <span className="text-sm font-bold text-ink">{val}</span>
-          </div>
+      {/* ── Plan Summary ─────────────────────────────────── */}
+      <div style={{ padding: '20px 20px 24px' }}>
+        <SectionLabel>Your Plan</SectionLabel>
+        {planRows.map(({ icon, label, val }, i) => (
+          <Row key={label} icon={icon} label={label} val={val} last={i === planRows.length - 1} />
         ))}
       </div>
 
-      {/* Profile Info */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-3">Lifestyle</p>
-        {profileRows.map(({ icon, label, val }) => (
-          <div key={label} className="flex justify-between items-center py-2.5 border-b border-cream-2 last:border-0">
-            <span className="flex items-center gap-2 text-sm text-ink/60"><span className="ms ms-sm" style={{fontSize:16}}>{icon}</span> {label}</span>
-            <span className="text-sm font-bold text-ink capitalize">{val}</span>
-          </div>
+      <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
+
+      {/* ── Lifestyle ────────────────────────────────────── */}
+      <div style={{ padding: '20px 20px 24px' }}>
+        <SectionLabel>Lifestyle</SectionLabel>
+        {profileRows.map(({ icon, label, val }, i) => (
+          <Row key={label} icon={icon} label={label} val={val} last={i === profileRows.length - 1} />
         ))}
       </div>
 
-      {/* Actions */}
-      <button onClick={() => { setEditing(true); onEditStart?.() }}
-        className="block w-[calc(100%-32px)] mx-4 mb-3 text-white font-bold text-sm py-4 rounded-xl text-center active:opacity-80"
-        style={{background: 'linear-gradient(135deg, #2A1F14, #C9A96E)'}}>
-        <span className="ms ms-sm" style={{fontSize:16}}>edit</span> Edit Profile & Regenerate Plan
-      </button>
+      <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
 
-      {/* Account */}
-      <div className="bg-white rounded-card shadow-card mx-4 mb-3 p-5">
-        <p className="text-xs font-bold tracking-widest text-ink/30 uppercase mb-2">Account</p>
-        <p className="text-sm text-ink/40 mb-4">{user?.email}</p>
-        <button onClick={signOut} className="w-full bg-cream-2 text-ink/60 font-bold text-sm py-3 rounded-xl mb-2 active:opacity-70">Sign Out</button>
-        <button onClick={() => setShowDeleteModal(true)} className="w-full bg-cream-2 text-danger font-bold text-sm py-3 rounded-xl active:opacity-70"><span className="ms ms-sm">delete</span> Delete Account</button>
+      {/* ── Actions ──────────────────────────────────────── */}
+      <div style={{ padding: '20px 20px 8px' }}>
+        <button
+          onClick={() => { setEditing(true); onEditStart?.() }}
+          style={{
+            width: '100%', padding: '17px 0', borderRadius: 18,
+            background: GOLD, color: '#1B1714',
+            fontSize: 15, fontWeight: 800, letterSpacing: '-0.3px',
+            cursor: 'pointer', border: 'none', marginBottom: 10,
+            boxShadow: '0 4px 20px rgba(228,178,106,0.3)',
+          }}>
+          <span className="ms ms-sm" style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 6 }}>edit</span>
+          Edit Profile & Regenerate Plan
+        </button>
       </div>
 
-      {/* Delete modal */}
+      {/* ── Account ──────────────────────────────────────── */}
+      <div style={{ padding: '0 20px 8px' }}>
+        <SectionLabel>Account</SectionLabel>
+        <p style={{ fontSize: 13, color: FAINT, marginBottom: 14 }}>{user?.email}</p>
+        <button
+          onClick={signOut}
+          style={{
+            width: '100%', padding: '15px 0', borderRadius: 16,
+            background: CARD, color: MUTED,
+            fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            border: `1px solid ${DIVIDER}`, marginBottom: 10,
+          }}>
+          Sign Out
+        </button>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          style={{
+            width: '100%', padding: '15px 0', borderRadius: 16,
+            background: 'rgba(224,82,82,0.08)', color: DANGER,
+            fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            border: `1px solid rgba(224,82,82,0.2)`,
+          }}>
+          <span className="ms ms-sm" style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 6 }}>delete</span>
+          Delete Account
+        </button>
+      </div>
+
+      {/* ── Delete modal ─────────────────────────────────── */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.5)' }}
-          onClick={e => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}>
-          <div className="bg-white rounded-t-3xl w-full max-w-[480px] mx-auto p-6 pb-10">
-            <div className="text-center mb-5">
-              <div className="text-4xl mb-3"><span className="ms ms-sm">warning</span></div>
-              <h2 className="text-xl font-extrabold text-ink">Delete Account?</h2>
-              <p className="text-sm text-ink/50 mt-2 leading-relaxed">
-                Your account will be deactivated for <strong>3 days</strong>. Sign back in to restore everything. After 3 days, all data is permanently deleted.
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 480, margin: '0 auto',
+            background: '#1C1410', borderRadius: '24px 24px 0 0',
+            padding: '28px 24px 40px',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <span className="ms" style={{ fontSize: 36, color: DANGER, display: 'block', marginBottom: 10 }}>warning</span>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 8 }}>Delete Account?</h2>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+                Your account will be deactivated for <strong style={{ color: TEXT }}>3 days</strong>. Sign back in to restore everything. After 3 days, all data is permanently deleted.
               </p>
             </div>
-            <div className="bg-cream-2 rounded-xl p-4 mb-5">
-              <p className="text-xs font-bold text-ink/40 uppercase tracking-wide mb-2">What gets deleted after 3 days</p>
+
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: '14px 16px', marginBottom: 20, border: `1px solid ${DIVIDER}` }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 }}>Deleted after 3 days</p>
               {['Profile & health metrics', 'Workout history & progress', 'Weight log & charts', 'Food logs & calorie history', 'All expenses tracked', 'Your AI-generated plan'].map((item, i) => (
-                <div key={i} className="flex gap-2 py-1 text-xs text-ink/50">
-                  <span className="text-danger font-bold">x</span><span>{item}</span>
+                <div key={i} style={{ display: 'flex', gap: 10, paddingTop: 6, paddingBottom: 6, fontSize: 12, color: MUTED }}>
+                  <span style={{ color: DANGER, fontWeight: 900 }}>×</span><span>{item}</span>
                 </div>
               ))}
             </div>
+
             <button
               onClick={async () => { setDeleteLoading(true); await deactivateAccount(); setDeleteLoading(false); setShowDeleteModal(false) }}
               disabled={deleteLoading}
-              className="w-full bg-danger text-white font-extrabold text-sm py-3.5 rounded-xl mb-3 active:opacity-80 disabled:opacity-50"
-            >
+              style={{
+                width: '100%', padding: '16px 0', borderRadius: 16, marginBottom: 10,
+                background: DANGER, color: '#fff', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', border: 'none', opacity: deleteLoading ? 0.5 : 1,
+              }}>
               {deleteLoading ? 'Deactivating...' : 'Deactivate My Account'}
             </button>
-            <button onClick={() => setShowDeleteModal(false)} className="w-full bg-cream-2 text-ink/60 font-bold text-sm py-3 rounded-xl">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              style={{
+                width: '100%', padding: '15px 0', borderRadius: 16,
+                background: CARD, color: MUTED, fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', border: `1px solid ${DIVIDER}`,
+              }}>
               Cancel
             </button>
           </div>
