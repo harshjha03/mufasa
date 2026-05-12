@@ -1,8 +1,20 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Profile } from '../types'
 
+// ── Design tokens ─────────────────────────────────────────
+const TEXT    = '#FBF6EE'
+const MUTED   = 'rgba(251,246,238,0.5)'
+const FAINT   = 'rgba(251,246,238,0.22)'
+const DIVIDER = 'rgba(255,255,255,0.09)'
+const GOLD    = '#E4B26A'
+const DANGER  = '#E05252'
+const INPUT_BG   = 'rgba(255,255,255,0.07)'
+const INPUT_BORDER = 'rgba(255,255,255,0.12)'
+const INPUT_FOCUS  = 'rgba(228,178,106,0.5)'
+
 const TOTAL_STEPS = 6
+
 interface ObData {
   name: string; age: string; gender: string; weight: string; height: string
   activity: string; goal: string; sport: string; sport_frequency: string
@@ -11,16 +23,32 @@ interface ObData {
 }
 interface Props { onDone?: () => void }
 
-// Input component defined OUTSIDE parent — never recreated on re-render
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, display: 'block', marginBottom: 8 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
 function StableInput({ label, value, onChange, type = 'text', placeholder, inputMode }: {
   label: string; value: string; onChange: (v: string) => void
   type?: string; placeholder: string; inputMode?: string
 }) {
   return (
-    <div>
-      <label className="text-xs font-bold tracking-widest text-ink/40 uppercase">{label}</label>
+    <Field label={label}>
       <input
-        className="w-full bg-cream border-2 border-cream-3 focus:border-gold text-ink text-base px-4 py-3 rounded-xl outline-none mt-1.5 transition-colors"
+        style={{
+          width: '100%', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`,
+          borderRadius: 14, padding: '13px 16px', fontSize: 15, color: TEXT,
+          outline: 'none', boxSizing: 'border-box',
+          fontFamily: '-apple-system, BlinkMacSystemFont, system-ui',
+        }}
+        onFocus={e => (e.target.style.borderColor = INPUT_FOCUS)}
+        onBlur={e  => (e.target.style.borderColor = INPUT_BORDER)}
         type={type}
         placeholder={placeholder}
         value={value}
@@ -28,29 +56,34 @@ function StableInput({ label, value, onChange, type = 'text', placeholder, input
         inputMode={inputMode as any}
         autoComplete="off"
       />
-    </div>
+    </Field>
   )
 }
 
-// Option button defined OUTSIDE parent
 function OptionBtn({ selected, onClick, icon, label, sub }: {
   selected: boolean; onClick: () => void; icon: string; label: string; sub?: string
 }) {
   return (
-    <button onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${selected ? 'border-gold bg-gold-pale' : 'border-cream-3 text-ink/70'}`}>
-      <span className={`ms ms-sm ${selected ? 'text-gold-dark' : 'text-ink/50'}`}>{icon}</span>
-      <div className="flex-1">
-        <div className={`font-semibold text-sm ${selected ? 'text-gold-dark' : 'text-ink'}`}>{label}</div>
-        {sub && <div className={`text-xs mt-0.5 ${selected ? 'text-gold-dark/70' : 'text-ink/30'}`}>{sub}</div>}
+    <button onClick={onClick} style={{
+      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+      padding: '13px 14px', borderRadius: 14, textAlign: 'left', cursor: 'pointer',
+      background: selected ? 'rgba(228,178,106,0.12)' : INPUT_BG,
+      border: `1.5px solid ${selected ? 'rgba(228,178,106,0.45)' : INPUT_BORDER}`,
+      transition: 'all 0.15s',
+      boxSizing: 'border-box',
+    }}>
+      <span className="ms ms-sm" style={{ fontSize: 18, color: selected ? GOLD : MUTED, flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: selected ? TEXT : MUTED }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: selected ? MUTED : FAINT, marginTop: 2 }}>{sub}</div>}
       </div>
-      {selected && <span className="text-gold-dark text-sm font-bold">✓</span>}
+      {selected && <span style={{ color: GOLD, fontSize: 14, fontWeight: 800 }}>✓</span>}
     </button>
   )
 }
 
 export default function OnboardingScreen({ onDone }: Props) {
-  const { saveProfile, user, profile } = useStore()
+  const { saveProfile, profile } = useStore()
 
   const [step, setStep] = useState(0)
   const [data, setData] = useState<ObData>(() => profile ? {
@@ -89,11 +122,9 @@ export default function OnboardingScreen({ onDone }: Props) {
     if (step === 1 && !data.gender) return 'Please select a gender.'
     if (step === 2 && (!data.weight || +data.weight < 30)) return 'Enter a valid weight.'
     if (step === 2 && (!data.height || +data.height < 100)) return 'Enter a valid height.'
-    if (step === 4 && !data.activity) return 'Please select your activity level.'
-    if (step === 5 && !data.goal) return 'Please select your goal.'
-    if (step === 6 && !data.gym_access) return 'Please select gym access.'
-    if (step === 6 && !data.diet_type) return 'Please select diet type.'
-    if (step === 7 && (!data.monthly_budget || +data.monthly_budget < 500)) return 'Enter a valid budget (min ₹500).'
+    if (step === 3 && !data.activity) return 'Please select your activity level.'
+    if (step === 4 && !data.goal) return 'Please select your goal.'
+    if (step === 5 && !data.diet_type) return 'Please select diet type.'
     return ''
   }
 
@@ -120,124 +151,135 @@ export default function OnboardingScreen({ onDone }: Props) {
       await saveProfile(p)
       setSaving(false)
       onDone?.()
-    } catch(e: any) {
+    } catch (e: any) {
       setSaving(false)
-      setError('Failed to save profile: ' + (e.message || 'Please try again'))
+      setError('Failed to save: ' + (e.message || 'Please try again'))
     }
   }
 
-  const stepTitles = ['Basic info', 'Gender', 'Measurements', 'Activity level', 'Your goal', 'Preferences & Budget']
+  const stepTitles = ['Basic info', 'Gender', 'Measurements', 'Activity level', 'Your goal', 'Preferences']
 
   const renderStep = () => {
     switch (step) {
       case 0: return (
-        <div className="flex flex-col gap-3">
-          <div><h2 className="text-xl font-extrabold text-ink mb-1">Hey, what's your name?</h2>
-            <p className="text-xs text-ink/40 mb-2">We'll personalise everything for you</p></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Hey, what's your name?</h2>
+            <p style={{ fontSize: 13, color: MUTED }}>We'll personalise everything for you</p>
+          </div>
           <StableInput label="Full Name" value={data.name} onChange={set('name')} placeholder="e.g. Rohan Sharma" />
           <StableInput label="Age" value={data.age} onChange={set('age')} type="number" placeholder="e.g. 25" inputMode="numeric" />
         </div>
       )
       case 1: return (
         <div>
-          <h2 className="text-xl font-extrabold text-ink mb-1">What's your gender?</h2>
-          <p className="text-xs text-ink/40 mb-4">Affects metabolic rate calculation</p>
-          <div className="flex flex-col gap-2">
-            <OptionBtn selected={data.gender === 'male'} onClick={opt('gender', 'male')} icon="male" label="Male" />
-            <OptionBtn selected={data.gender === 'female'} onClick={opt('gender', 'female')} icon="female" label="Female" />
-            <OptionBtn selected={data.gender === 'other'} onClick={opt('gender', 'other')} icon="transgender" label="Other / Prefer not to say" />
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>What's your gender?</h2>
+          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Affects metabolic rate calculation</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <OptionBtn selected={data.gender === 'male'}   onClick={opt('gender', 'male')}   icon="male"        label="Male" />
+            <OptionBtn selected={data.gender === 'female'} onClick={opt('gender', 'female')} icon="female"      label="Female" />
+            <OptionBtn selected={data.gender === 'other'}  onClick={opt('gender', 'other')}  icon="transgender" label="Other / Prefer not to say" />
           </div>
         </div>
       )
       case 2: return (
         <div>
-          <h2 className="text-xl font-extrabold text-ink mb-1">Your measurements</h2>
-          <p className="text-xs text-ink/40 mb-4">Used to calculate BMI and calorie targets</p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Your measurements</h2>
+          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Used to calculate BMI and calorie targets</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
             <StableInput label="Weight (kg)" value={data.weight} onChange={set('weight')} type="number" placeholder="e.g. 75" inputMode="decimal" />
             <StableInput label="Height (cm)" value={data.height} onChange={set('height')} type="number" placeholder="e.g. 175" inputMode="decimal" />
           </div>
           {bmi && (
-            <div className="bg-gold-pale rounded-xl px-4 py-3 flex justify-between items-center">
-              <div><span className="text-2xl font-extrabold text-gold-dark">{bmi}</span><span className="text-xs text-gold-dark font-bold ml-1">BMI</span></div>
-              <span className="text-xs text-gold-dark/70 font-semibold">{bmiCat}</span>
+            <div style={{ background: 'rgba(228,178,106,0.1)', border: `1.5px solid rgba(228,178,106,0.3)`, borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: 26, fontWeight: 800, color: GOLD }}>{bmi}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginLeft: 6 }}>BMI</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>{bmiCat}</span>
             </div>
           )}
         </div>
       )
       case 3: return (
         <div>
-          <h2 className="text-xl font-extrabold text-ink mb-1">How active are you?</h2>
-          <p className="text-xs text-ink/40 mb-4">On a typical non-gym day</p>
-          <div className="flex flex-col gap-2">
-            <OptionBtn selected={data.activity === 'sedentary'} onClick={opt('activity', 'sedentary')} icon="chair" label="Sedentary" sub="Desk job, little movement" />
-            <OptionBtn selected={data.activity === 'light'} onClick={opt('activity', 'light')} icon="directions_walk" label="Lightly Active" sub="Some walking, light activity" />
-            <OptionBtn selected={data.activity === 'moderate'} onClick={opt('activity', 'moderate')} icon="directions_run" label="Moderately Active" sub="Regular movement, active job" />
-            <OptionBtn selected={data.activity === 'very'} onClick={opt('activity', 'very')} icon="bolt" label="Very Active" sub="Heavy manual work or athlete" />
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>How active are you?</h2>
+          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>On a typical non-gym day</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <OptionBtn selected={data.activity === 'sedentary'} onClick={opt('activity', 'sedentary')} icon="chair"          label="Sedentary"        sub="Desk job, little movement" />
+            <OptionBtn selected={data.activity === 'light'}     onClick={opt('activity', 'light')}     icon="directions_walk" label="Lightly Active"   sub="Some walking, light activity" />
+            <OptionBtn selected={data.activity === 'moderate'}  onClick={opt('activity', 'moderate')}  icon="directions_run"  label="Moderately Active" sub="Regular movement, active job" />
+            <OptionBtn selected={data.activity === 'very'}      onClick={opt('activity', 'very')}      icon="bolt"            label="Very Active"      sub="Heavy manual work or athlete" />
           </div>
         </div>
       )
       case 4: return (
         <div>
-          <h2 className="text-xl font-extrabold text-ink mb-1">What's your main goal?</h2>
-          <p className="text-xs text-ink/40 mb-4">Your AI plan will be built around this</p>
-          <div className="flex flex-col gap-2">
-            <OptionBtn selected={data.goal === 'lose'} onClick={opt('goal', 'lose')} icon="local_fire_department" label="Lose Fat" sub="Calorie deficit · preserve muscle" />
-            <OptionBtn selected={data.goal === 'recomp'} onClick={opt('goal', 'recomp')} icon="balance" label="Recomposition" sub="Lose fat and build muscle simultaneously" />
-            <OptionBtn selected={data.goal === 'gain'} onClick={opt('goal', 'gain')} icon="fitness_center" label="Build Muscle" sub="Calorie surplus · maximise gains" />
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>What's your main goal?</h2>
+          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Your AI plan will be built around this</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <OptionBtn selected={data.goal === 'lose'}   onClick={opt('goal', 'lose')}   icon="local_fire_department" label="Lose Fat"       sub="Calorie deficit · preserve muscle" />
+            <OptionBtn selected={data.goal === 'recomp'} onClick={opt('goal', 'recomp')} icon="balance"               label="Recomposition" sub="Lose fat and build muscle simultaneously" />
+            <OptionBtn selected={data.goal === 'gain'}   onClick={opt('goal', 'gain')}   icon="fitness_center"        label="Build Muscle"  sub="Calorie surplus · maximise gains" />
           </div>
         </div>
       )
       case 5: return (
-        <div>
-          <h2 className="text-xl font-extrabold text-ink mb-1">Final details</h2>
-          <p className="text-xs text-ink/40 mb-4">Almost done — just a few more things</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Final details</h2>
+            <p style={{ fontSize: 13, color: MUTED }}>Almost done — just a few more things</p>
+          </div>
 
-          {/* Wake/Sleep */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label className="text-xs font-bold tracking-widest text-ink/40 uppercase">Wake up</label>
-              <input type="time" className="w-full bg-cream border-2 border-cream-3 focus:border-gold text-ink text-base px-4 py-3 rounded-xl outline-none mt-1.5 transition-colors"
+          {/* Wake / Sleep */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Wake up">
+              <input type="time" style={{ width: '100%', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`, borderRadius: 14, padding: '13px 14px', fontSize: 14, color: TEXT, outline: 'none', boxSizing: 'border-box' }}
                 value={data.wake_time.includes(':') && !data.wake_time.includes('AM') && !data.wake_time.includes('PM') ? data.wake_time : '06:00'}
                 onChange={e => setData(d => ({ ...d, wake_time: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-xs font-bold tracking-widest text-ink/40 uppercase">Sleep</label>
-              <input type="time" className="w-full bg-cream border-2 border-cream-3 focus:border-gold text-ink text-base px-4 py-3 rounded-xl outline-none mt-1.5 transition-colors"
+            </Field>
+            <Field label="Sleep">
+              <input type="time" style={{ width: '100%', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`, borderRadius: 14, padding: '13px 14px', fontSize: 14, color: TEXT, outline: 'none', boxSizing: 'border-box' }}
                 value={data.sleep_time.includes(':') && !data.sleep_time.includes('AM') && !data.sleep_time.includes('PM') ? data.sleep_time : '22:30'}
                 onChange={e => setData(d => ({ ...d, sleep_time: e.target.value }))} />
-            </div>
+            </Field>
           </div>
 
           {/* Diet */}
-          <div className="mb-4">
-            <label className="text-xs font-bold tracking-widest text-ink/40 uppercase mb-2 block">Diet preference</label>
-            <div className="flex flex-col gap-2">
-              <OptionBtn selected={data.diet_type === 'vegetarian'} onClick={opt('diet_type', 'vegetarian')} icon="restaurant" label="Vegetarian" sub="No meat, no eggs" />
-              <OptionBtn selected={data.diet_type === 'eggetarian'} onClick={opt('diet_type', 'eggetarian')} icon="egg" label="Eggetarian" sub="Vegetarian + eggs" />
-              <OptionBtn selected={data.diet_type === 'non_vegetarian'} onClick={opt('diet_type', 'non_vegetarian')} icon="set_meal" label="Non-vegetarian" sub="Includes chicken, eggs, fish" />
-              <OptionBtn selected={data.diet_type === 'vegan'} onClick={opt('diet_type', 'vegan')} icon="eco" label="Vegan" sub="No animal products" />
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Diet preference</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <OptionBtn selected={data.diet_type === 'vegetarian'}     onClick={opt('diet_type', 'vegetarian')}     icon="restaurant" label="Vegetarian"     sub="No meat, no eggs" />
+              <OptionBtn selected={data.diet_type === 'eggetarian'}     onClick={opt('diet_type', 'eggetarian')}     icon="egg"        label="Eggetarian"     sub="Vegetarian + eggs" />
+              <OptionBtn selected={data.diet_type === 'non_vegetarian'} onClick={opt('diet_type', 'non_vegetarian')} icon="set_meal"   label="Non-vegetarian" sub="Includes chicken, eggs, fish" />
+              <OptionBtn selected={data.diet_type === 'vegan'}          onClick={opt('diet_type', 'vegan')}          icon="eco"        label="Vegan"          sub="No animal products" />
             </div>
           </div>
 
           {/* Budget */}
           <div>
-            <label className="text-xs font-bold tracking-widest text-ink/40 uppercase mb-2 block">Monthly fitness budget</label>
-            <div className="flex gap-2 flex-wrap mb-2">
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Monthly fitness budget</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
               {[2000, 3000, 5000, 7000, 10000].map(amt => (
                 <button key={amt} onClick={() => setData(d => ({ ...d, monthly_budget: String(amt) }))}
-                  className={`flex-1 min-w-[80px] text-center py-2.5 rounded-xl border-2 transition-all ${data.monthly_budget === String(amt) ? 'border-gold bg-gold-pale text-gold-dark' : 'border-cream-3 text-ink/60'}`}>
-                  <p className="font-bold text-xs">₹{(amt/1000).toFixed(0)}k</p>
+                  style={{
+                    flex: 1, minWidth: 64, padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
+                    background: data.monthly_budget === String(amt) ? 'rgba(228,178,106,0.12)' : INPUT_BG,
+                    border: `1.5px solid ${data.monthly_budget === String(amt) ? 'rgba(228,178,106,0.45)' : INPUT_BORDER}`,
+                    color: data.monthly_budget === String(amt) ? GOLD : MUTED,
+                    fontSize: 12, fontWeight: 700,
+                  }}>
+                  ₹{(amt / 1000).toFixed(0)}k
                 </button>
               ))}
             </div>
-            <div className="flex items-center bg-cream border-2 border-cream-3 focus-within:border-gold rounded-xl overflow-hidden transition-colors">
-              <span className="pl-4 text-ink/40 font-bold text-base">₹</span>
-              <input className="flex-1 bg-transparent text-ink text-base px-2 py-3 outline-none"
+            <div style={{ display: 'flex', alignItems: 'center', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
+              <span style={{ paddingLeft: 16, color: MUTED, fontWeight: 700 }}>₹</span>
+              <input style={{ flex: 1, background: 'transparent', color: TEXT, fontSize: 14, padding: '13px 8px', outline: 'none' }}
                 type="number" placeholder="custom amount" inputMode="numeric"
                 value={data.monthly_budget}
                 onChange={e => setData(d => ({ ...d, monthly_budget: e.target.value }))} />
-              <span className="pr-4 text-xs text-ink/30">/month</span>
+              <span style={{ paddingRight: 16, fontSize: 11, color: FAINT }}>/month</span>
             </div>
           </div>
         </div>
@@ -246,34 +288,83 @@ export default function OnboardingScreen({ onDone }: Props) {
     }
   }
 
-
   return (
-    <div className="fixed inset-0 bg-cream flex flex-col items-center px-6 py-8 overflow-y-auto z-50 pt-10">
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: 'max(env(safe-area-inset-top, 0px) + 16px, 32px) 20px 40px',
+      overflowY: 'auto',
+    }}>
+      {/* Ambient glow */}
+      <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
+
+      {/* Logo — only on first entry, not edit */}
       {!onDone && (
-        <div className="text-center mb-6">
-          <div className="font-serif text-3xl text-ink mb-1">Mu<span className="text-gold-dark">fasa</span></div>
-          <p className="text-xs text-ink/40">AI-powered personalised plan</p>
+        <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative' }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: TEXT, letterSpacing: '-1px' }}>
+            Mu<span style={{ color: GOLD }}>fasa</span>
+          </div>
+          <p style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>AI-powered personalised plan</p>
         </div>
       )}
-      <div className="bg-white rounded-card shadow-lg p-6 w-full max-w-sm">
-        <div className="flex gap-1.5 justify-center mb-2">
+
+      {/* Card */}
+      <div style={{
+        width: '100%', maxWidth: 420, position: 'relative',
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid rgba(255,255,255,0.1)`,
+        borderRadius: 24, padding: '24px 20px',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+      }}>
+        {/* Step dots */}
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 8 }}>
           {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? 'bg-teal w-6' : i < step ? 'bg-teal-light w-1.5' : 'bg-cream-3 w-1.5'}`} />
+            <div key={i} style={{
+              height: 4, borderRadius: 4,
+              width: i === step ? 24 : 6,
+              background: i === step ? GOLD : i < step ? 'rgba(228,178,106,0.4)' : 'rgba(255,255,255,0.15)',
+              transition: 'all 0.2s',
+            }} />
           ))}
         </div>
-        <p className="text-center text-xs text-ink/30 mb-5 font-semibold uppercase tracking-widest">{step + 1} of {TOTAL_STEPS} — {stepTitles[step]}</p>
+        <p style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 }}>
+          {step + 1} of {TOTAL_STEPS} — {stepTitles[step]}
+        </p>
+
         {renderStep()}
-        {error && <p className="text-danger text-xs mt-3">{error}</p>}
-        <div className="flex gap-2.5 mt-6">
+
+        {error && <p style={{ color: DANGER, fontSize: 12, marginTop: 12 }}>{error}</p>}
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           {(step > 0 || onDone) && (
-            <button onClick={() => step > 0 ? (setStep(s => s - 1), setError('')) : onDone?.()}
-              className="bg-cream-2 text-ink/60 font-bold text-sm py-3 px-5 rounded-xl active:opacity-70">
+            <button
+              onClick={() => step > 0 ? (setStep(s => s - 1), setError('')) : onDone?.()}
+              style={{
+                padding: '14px 20px', borderRadius: 14, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.07)', color: MUTED,
+                fontSize: 14, fontWeight: 700,
+                border: `1px solid ${DIVIDER}`,
+              }}>
               {step === 0 ? 'Cancel' : 'Back'}
             </button>
           )}
-          <button onClick={next} disabled={saving}
-            className="flex-1 bg-gold text-ink font-bold text-sm py-3 rounded-xl disabled:opacity-50 active:opacity-80">
-            {saving ? <><span className="ms ms-sm" style={{fontSize:16}}>smart_toy</span> Generating...</> : step === TOTAL_STEPS - 1 ? (onDone ? <>Save &amp; Regenerate <span className="ms ms-sm" style={{fontSize:16}}>smart_toy</span></> : <>Generate My Plan <span className="ms ms-sm" style={{fontSize:16}}>smart_toy</span></>) : 'Continue →'}
+          <button
+            onClick={next}
+            disabled={saving}
+            style={{
+              flex: 1, padding: '14px 0', borderRadius: 14, cursor: 'pointer',
+              background: GOLD, color: '#1B1714',
+              fontSize: 14, fontWeight: 800,
+              border: 'none', opacity: saving ? 0.6 : 1,
+              boxShadow: '0 4px 20px rgba(228,178,106,0.3)',
+            }}>
+            {saving
+              ? 'Generating...'
+              : step === TOTAL_STEPS - 1
+                ? (onDone ? 'Save & Regenerate' : 'Generate My Plan')
+                : 'Continue →'}
           </button>
         </div>
       </div>
