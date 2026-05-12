@@ -3,17 +3,18 @@ import { useStore } from '../store/useStore'
 import { DAYS, DAY_SHORT } from '../lib/data'
 import ExerciseFigure from '../components/ExerciseFigure'
 
-// ── Design tokens ────────────────────────────────────────
-const BG     = '#120D08'
-const CARD   = '#1C1410'
-const ELEV   = '#221A12'
-const BORDER = 'rgba(255,255,255,0.07)'
-const TEXT   = '#F0E4C8'
-const MUTED  = 'rgba(240,228,200,0.45)'
-const GOLD   = '#D4A84B'
-const COPPER = '#D4905A'
-const AZURE  = '#5B8FA8'
-const SAGE   = '#7BAE8A'
+// ── Design tokens — immersiveBronze spec ─────────────────
+const BG      = '#120D08'
+const CARD    = '#1C1410'
+const ELEV    = '#221A12'
+const BORDER  = 'rgba(255,255,255,0.07)'
+const TEXT    = '#FBF6EE'
+const MUTED   = 'rgba(251,246,238,0.5)'
+const GOLD    = '#E4B26A'   // accent
+const PROTEIN = '#7DD9C5'
+const CARBS   = '#92C2F2'
+const COPPER  = '#D4905A'
+const SAGE    = '#7BAE8A'
 
 export default function WorkoutScreen() {
   const { plan, workoutDone, toggleExercise, selectedDay, setSelectedDay } = useStore()
@@ -41,14 +42,15 @@ export default function WorkoutScreen() {
   const muscleColor = (muscle: string) => {
     const m = (muscle || '').toLowerCase()
     if (m.includes('chest') || m.includes('push')) return { bg: 'rgba(212,168,75,0.12)', text: GOLD }
-    if (m.includes('back')  || m.includes('pull')) return { bg: 'rgba(91,143,168,0.12)', text: AZURE }
+    if (m.includes('back')  || m.includes('pull')) return { bg: 'rgba(146,194,242,0.12)', text: CARBS }
     if (m.includes('leg')   || m.includes('quad') || m.includes('glute')) return { bg: 'rgba(212,144,90,0.12)', text: COPPER }
     if (m.includes('shoulder') || m.includes('delt')) return { bg: 'rgba(123,174,138,0.12)', text: SAGE }
     return { bg: 'rgba(255,255,255,0.07)', text: MUTED }
   }
 
   return (
-    <div style={{ background: 'linear-gradient(180deg, #2A1608 0%, #180B04 25%, #120D08 55%, #0E0A06 100%)', minHeight: '100vh', paddingBottom: 96 }}>
+    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100vh', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
 
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 24px) 20px 16px' }}>
@@ -170,19 +172,20 @@ export default function WorkoutScreen() {
                 <button key={d} onClick={() => setSelectedDay(d)} style={{
                   flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center',
                   padding: '10px 14px', borderRadius: 16, minWidth: 52, cursor: 'pointer',
-                  background: isActive ? ELEV : CARD,
-                  border: `1px solid ${isActive ? 'rgba(212,168,75,0.35)' : BORDER}`,
+                  background: isActive ? GOLD : 'rgba(255,255,255,0.07)',
+                  border: isActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
                   transition: 'all 0.2s',
                 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: isActive ? GOLD : MUTED }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: isActive ? '#1B1714' : MUTED, opacity: isActive ? 0.85 : 1 }}>
                     {DAY_SHORT[d]}
                   </span>
-                  <span style={{ fontSize: 20, fontWeight: 800, marginTop: 2, color: isActive ? TEXT : MUTED }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, marginTop: 2, color: isActive ? '#1B1714' : TEXT }}>
                     {num}
                   </span>
                   <div style={{
-                    width: 5, height: 5, borderRadius: '50%', marginTop: 4,
-                    background: hasWo ? (isActive ? GOLD : 'rgba(212,168,75,0.4)') : 'transparent',
+                    width: 4, height: 4, borderRadius: '50%', marginTop: 4,
+                    background: hasWo ? (isActive ? '#1B1714' : PROTEIN) : 'transparent',
+                    opacity: isActive ? 0.5 : 1,
                   }} />
                 </button>
               )
@@ -295,12 +298,27 @@ export default function WorkoutScreen() {
                   <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>After</p>
                   {plan.sportProtocol.post.map((s: string, i: number) => (
                     <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: TEXT, marginBottom: 6, lineHeight: 1.4 }}>
-                      <span style={{ color: AZURE, fontWeight: 800 }}>→</span><span>{s}</span>
+                      <span style={{ color: CARBS, fontWeight: 800 }}>→</span><span>{s}</span>
                     </div>
                   ))}
                 </div>
               )}
               <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>{plan.sportProtocol.nutrition}</p>
+            </div>
+          )}
+
+          {/* Start Workout CTA */}
+          {wo && (
+            <div style={{ padding: '20px 16px 8px' }}>
+              <button style={{
+                width: '100%', padding: '18px 0', borderRadius: 18,
+                background: GOLD, color: '#1B1714',
+                fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px',
+                cursor: 'pointer', border: 'none',
+                boxShadow: '0 4px 20px rgba(228,178,106,0.35)',
+              }}>
+                Start Workout
+              </button>
             </div>
           )}
 

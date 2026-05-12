@@ -1,42 +1,43 @@
 import { useStore } from '../store/useStore'
 import ExerciseFigure from '../components/ExerciseFigure'
 
-// ── Design tokens ────────────────────────────────────────
-const TEXT   = '#F0E4C8'
-const MUTED  = 'rgba(240,228,200,0.45)'
-const FAINT  = 'rgba(240,228,200,0.18)'
-const DIVIDER = 'rgba(255,255,255,0.08)'
-const GOLD   = '#D4A84B'
-const COPPER = '#D4905A'
-const AZURE  = '#5B8FA8'
-const SAGE   = '#7BAE8A'
-const DARK_CARD = 'rgba(0,0,0,0.25)'
+// ── Design tokens — immersiveBronze spec ─────────────────
+const TEXT    = '#FBF6EE'
+const MUTED   = 'rgba(251,246,238,0.5)'
+const FAINT   = 'rgba(251,246,238,0.22)'
+const DIVIDER = 'rgba(255,255,255,0.09)'
+const GOLD    = '#E4B26A'   // immersiveBronze accent
+const PROTEIN = '#7DD9C5'   // macroProtein
+const CARBS   = '#92C2F2'   // macroCarbs
+const FAT     = '#E4B26A'   // macroFat (same as accent)
+const DARK_CARD = 'rgba(0,0,0,0.28)'
 
-// ── Immersive macro ring ─────────────────────────────────
+// ── Immersive macro ring — 58×58 per design spec ─────────
 function MacroRing({ pct, label, value, color }: {
   pct: number; label: string; value: string; color: string
 }) {
-  const r    = 38
+  const r    = 24
   const circ = 2 * Math.PI * r
   const off  = circ * (1 - Math.min(1, pct / 100))
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      <div style={{ position: 'relative', width: 96, height: 96 }}>
-        <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-          <circle cx="48" cy="48" r={r} fill="none" stroke={color} strokeWidth="6"
-            strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+      <div style={{ position: 'relative', width: 58, height: 58 }}>
+        <svg width="58" height="58" viewBox="0 0 58 58">
+          <circle cx="29" cy="29" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
+          <circle cx="29" cy="29" r={r} fill="none" stroke={color} strokeWidth="5"
+            strokeLinecap="round" strokeDasharray={circ}
+            strokeDashoffset={off} transform="rotate(-90 29 29)"
             style={{ transition: 'stroke-dashoffset 0.7s ease' }} />
         </svg>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.5px' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: TEXT, letterSpacing: -0.3 }}>
             {Math.round(pct)}%
           </span>
         </div>
       </div>
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 9, fontWeight: 800, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</p>
-        <p style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginTop: 2 }}>{value}</p>
+        <p style={{ fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.7 }}>{label}</p>
+        <p style={{ fontSize: 10, color: TEXT, opacity: 0.55, marginTop: 1 }}>{value}</p>
       </div>
     </div>
   )
@@ -106,9 +107,14 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
     <div style={{
       minHeight: '100vh',
       paddingBottom: 100,
-      // Immersive warm amber gradient — the key visual signature
-      background: 'linear-gradient(180deg, #3B1D09 0%, #1E0D05 32%, #120D08 60%, #0E0A06 100%)',
+      // Immersive radial gradient — spec: radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)
+      background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
+      position: 'relative', overflow: 'hidden',
     }}>
+      {/* Ambient glow 1 — warm top-right */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.22), transparent 60%)', pointerEvents: 'none' }} />
+      {/* Ambient glow 2 — circle */}
+      <div style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(228,178,106,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
       {/* ── Top bar: greeting + chips ───────────────────── */}
       <div style={{
@@ -120,9 +126,9 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
           {greeting}{firstName ? `, ${firstName}` : ''}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(212,168,75,0.12)', border: '1px solid rgba(212,168,75,0.22)', borderRadius: 20, padding: '4px 10px' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, flexShrink: 0 }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: GOLD }}>Wk {weekNum}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(228,178,106,0.14)', borderRadius: 20, padding: '5px 10px' }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: TEXT }}>Wk {weekNum}</span>
           </div>
           <button
             onClick={() => onNavigate?.('profile')}
@@ -139,12 +145,12 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
 
       {/* ── Hero: date + big workout name ───────────────── */}
       <div style={{ padding: '16px 20px 24px' }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: FAINT, letterSpacing: '0.14em', marginBottom: 10 }}>
-          TODAY · {dateStr}
+        <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, opacity: 0.55, textTransform: 'uppercase', marginBottom: 10 }}>
+          Today · {dateStr}
         </p>
         <h1 style={{
-          fontSize: wo ? 58 : 46, fontWeight: 800, color: TEXT,
-          letterSpacing: '-2px', lineHeight: 0.95,
+          fontSize: wo ? 52 : 44, fontWeight: 800, color: TEXT,
+          letterSpacing: '-1.8px', lineHeight: 0.95,
           fontFamily: '-apple-system, BlinkMacSystemFont, system-ui',
           marginBottom: 14,
         }}>
@@ -168,7 +174,7 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
       {/* ── Macros Today ────────────────────────────────── */}
       <div style={{ padding: '20px 20px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: FAINT, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55 }}>
             {mode ? `${mode.toUpperCase()} · DAY ${dayNum}` : 'Macros Today'}
           </p>
           {calPct > 0 && (
@@ -183,15 +189,15 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
             value={caloriesLogged > 0 ? caloriesLogged.toLocaleString('en-IN') : targetCal.toLocaleString('en-IN')}
           />
           <MacroRing
-            pct={pPct || 0} label="Protein" color={COPPER}
+            pct={pPct || 0} label="Protein" color={PROTEIN}
             value={proteinLogged > 0 ? `${proteinLogged}g` : `${targetProtein}g`}
           />
           <MacroRing
-            pct={cPct || 0} label="Carbs" color={AZURE}
+            pct={cPct || 0} label="Carbs" color={CARBS}
             value={carbsLogged > 0 ? `${carbsLogged}g` : `${targetCarbs}g`}
           />
           <MacroRing
-            pct={fPct || 0} label="Fat" color={GOLD}
+            pct={fPct || 0} label="Fat" color={FAT}
             value={fatLogged > 0 ? `${fatLogged}g` : `${targetFat}g`}
           />
         </div>
@@ -206,7 +212,7 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
         <button
           onClick={() => onNavigate?.('workout')}
           style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: total > 0 ? 14 : 0, cursor: 'pointer' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: FAINT, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55 }}>
             Today's Workout
           </p>
           {wo && (
@@ -291,7 +297,7 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
         <button
           onClick={() => onNavigate?.('nutrition')}
           style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, cursor: 'pointer' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: FAINT, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55 }}>
             Today's Meals
           </p>
           <p style={{ fontSize: 11, color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -313,11 +319,10 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
               }}>
                 <span style={{
                   flexShrink: 0,
-                  background: 'rgba(0,0,0,0.35)', color: TEXT,
+                  background: '#1B1714', color: TEXT,
                   fontSize: 10, fontWeight: 700, padding: '5px 10px',
-                  borderRadius: 20, letterSpacing: '0.03em',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  marginTop: 1,
+                  borderRadius: 999, letterSpacing: '0.03em',
+                  marginTop: 1, whiteSpace: 'nowrap',
                 }}>
                   {m.time}
                 </span>
@@ -342,7 +347,7 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
 
       {/* ── 5 Rules ──────────────────────────────────────── */}
       <div style={{ padding: '20px 20px 8px' }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: FAINT, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 20 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55, marginBottom: 20 }}>
           5 Rules That Override Everything
         </p>
         {[

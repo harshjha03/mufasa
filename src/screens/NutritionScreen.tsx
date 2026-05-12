@@ -4,18 +4,19 @@ import { searchFoods } from '../lib/foodDb'
 import { searchFoodWeb } from '../lib/aiFood'
 import type { FoodItem } from '../types'
 
-// ── Design tokens ────────────────────────────────────────
-const BG     = '#120D08'
-const CARD   = '#1C1410'
-const ELEV   = '#221A12'
-const BORDER = 'rgba(255,255,255,0.07)'
-const TEXT   = '#F0E4C8'
-const MUTED  = 'rgba(240,228,200,0.45)'
-const GOLD   = '#D4A84B'
-const COPPER = '#D4905A'
-const AZURE  = '#5B8FA8'
-const SAGE   = '#7BAE8A'
-const DANGER = '#E05252'
+// ── Design tokens — immersiveBronze spec ─────────────────
+const BG      = '#120D08'
+const CARD    = '#1C1410'
+const ELEV    = '#221A12'
+const BORDER  = 'rgba(255,255,255,0.07)'
+const TEXT    = '#FBF6EE'
+const MUTED   = 'rgba(251,246,238,0.5)'
+const GOLD    = '#E4B26A'   // accent
+const PROTEIN = '#7DD9C5'
+const CARBS   = '#92C2F2'
+const FAT     = '#E4B26A'
+const COPPER  = '#D4905A'
+const DANGER  = '#E05252'
 
 const MEAL_SLOTS = [
   { id: 'breakfast', label: 'Breakfast', icon: 'wb_twilight' },
@@ -127,7 +128,8 @@ export default function NutritionScreen() {
   const meals = plan?.meals ?? []
 
   return (
-    <div style={{ background: 'linear-gradient(180deg, #2A1608 0%, #180B04 25%, #120D08 55%, #0E0A06 100%)', minHeight: '100vh', paddingBottom: 96 }}>
+    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100vh', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
 
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 24px) 20px 16px' }}>
@@ -160,16 +162,50 @@ export default function NutritionScreen() {
       {/* ── PLAN TAB ───────────────────────────────────── */}
       {tab === 'plan' && (
         <>
-          {/* Daily targets — 4 rings */}
-          <div style={{ margin: '0 16px 12px', background: CARD, borderRadius: 20, padding: '18px 16px', border: `1px solid ${BORDER}` }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
-              Daily Targets
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-              <MiniRing value={0} target={plan?.calories ?? 2000} label="Kcal"    color={GOLD}   unit="kcal" />
-              <MiniRing value={0} target={plan?.protein  ?? 150}  label="Protein" color={COPPER} />
-              <MiniRing value={0} target={plan?.carbs    ?? 200}  label="Carbs"   color={AZURE}  />
-              <MiniRing value={0} target={plan?.fat      ?? 60}   label="Fat"     color={SAGE}   />
+          {/* Daily calories hero + macro tiles */}
+          <div style={{ margin: '0 16px 12px', padding: '18px 16px' }}>
+            {/* Big kcal number */}
+            <div style={{ marginBottom: 18, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: TEXT, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.55, marginBottom: 6 }}>
+                Today's Calories
+              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 44, fontWeight: 800, color: TEXT, letterSpacing: '-2px', lineHeight: 1 }}>
+                  {Math.round(totalCal) || (plan?.calories ?? 2000)}
+                </span>
+                <span style={{ fontSize: 14, color: MUTED }}>/ {plan?.calories ?? 2000} kcal</span>
+                {totalCal > 0 && (
+                  <span style={{
+                    marginLeft: 'auto', fontSize: 11, fontWeight: 700,
+                    color: calStatus().color, padding: '4px 10px', borderRadius: 20,
+                    background: 'rgba(255,255,255,0.07)',
+                  }}>{calStatus().text}</span>
+                )}
+              </div>
+              {/* Progress bar */}
+              <div style={{ marginTop: 10, height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, totalCal / (plan?.calories ?? 2000) * 100)}%`, background: GOLD, borderRadius: 4, transition: 'width 0.5s ease' }} />
+              </div>
+            </div>
+            {/* 3-column macro tiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {[
+                { label: 'Protein', value: Math.round(totalP) || (plan?.protein ?? 150), target: plan?.protein ?? 150, color: PROTEIN, unit: 'g' },
+                { label: 'Carbs',   value: Math.round(totalC) || (plan?.carbs   ?? 200), target: plan?.carbs   ?? 200, color: CARBS,   unit: 'g' },
+                { label: 'Fat',     value: Math.round(totalF) || (plan?.fat     ?? 60),  target: plan?.fat     ?? 60,  color: FAT,     unit: 'g' },
+              ].map(({ label, value, target, color, unit }) => (
+                <div key={label} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: '12px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, fontWeight: 600, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: '-0.8px' }}>{value}<span style={{ fontSize: 11, fontWeight: 600, color: MUTED, marginLeft: 2 }}>{unit}</span></div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>/ {target}{unit}</div>
+                  <div style={{ marginTop: 6, height: 3, borderRadius: 3, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, value / target * 100)}%`, background: color, borderRadius: 3, transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -191,15 +227,15 @@ export default function NutritionScreen() {
               {/* Macro bar */}
               <div style={{ padding: '0 18px 16px' }}>
                 <div style={{ display: 'flex', height: 4, borderRadius: 4, overflow: 'hidden', background: 'rgba(255,255,255,0.06)', gap: 1 }}>
-                  <div style={{ background: COPPER, borderRadius: 4, width: `${m.p * 4 / m.cal * 100}%` }} />
-                  <div style={{ background: AZURE,  borderRadius: 4, width: `${m.c * 4 / m.cal * 100}%` }} />
-                  <div style={{ background: GOLD,   borderRadius: 4, width: `${m.f * 9 / m.cal * 100}%` }} />
+                  <div style={{ background: PROTEIN, borderRadius: 4, width: `${m.p * 4 / m.cal * 100}%` }} />
+                  <div style={{ background: CARBS,   borderRadius: 4, width: `${m.c * 4 / m.cal * 100}%` }} />
+                  <div style={{ background: GOLD,    borderRadius: 4, width: `${m.f * 9 / m.cal * 100}%` }} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                   {[
-                    { l: `P ${m.p}g`, bg: 'rgba(212,144,90,0.12)', t: COPPER },
-                    { l: `C ${m.c}g`, bg: 'rgba(91,143,168,0.12)', t: AZURE },
-                    { l: `F ${m.f}g`, bg: 'rgba(212,168,75,0.12)', t: GOLD },
+                    { l: `P ${m.p}g`, bg: 'rgba(125,217,197,0.12)', t: PROTEIN },
+                    { l: `C ${m.c}g`, bg: 'rgba(146,194,242,0.12)', t: CARBS },
+                    { l: `F ${m.f}g`, bg: 'rgba(228,178,106,0.12)', t: FAT },
                   ].map(({ l, bg, t }) => (
                     <span key={l} style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: bg, color: t }}>
                       {l}
@@ -269,10 +305,10 @@ export default function NutritionScreen() {
               <p style={{ fontSize: 11, fontWeight: 700, color: calStatus().color }}>{calStatus().text}</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-              <MiniRing value={Math.round(totalCal)} target={targetCal} label="Kcal"    color={GOLD}   unit="kcal" />
-              <MiniRing value={Math.round(totalP)}   target={targetP}   label="Protein" color={COPPER} />
-              <MiniRing value={Math.round(totalC)}   target={targetC}   label="Carbs"   color={AZURE}  />
-              <MiniRing value={Math.round(totalF)}   target={targetF}   label="Fat"     color={SAGE}   />
+              <MiniRing value={Math.round(totalCal)} target={targetCal} label="Kcal"    color={GOLD}    unit="kcal" />
+              <MiniRing value={Math.round(totalP)}   target={targetP}   label="Protein" color={PROTEIN} />
+              <MiniRing value={Math.round(totalC)}   target={targetC}   label="Carbs"   color={CARBS}   />
+              <MiniRing value={Math.round(totalF)}   target={targetF}   label="Fat"     color={FAT}     />
             </div>
           </div>
 
@@ -462,7 +498,7 @@ export default function NutritionScreen() {
                       {[
                         { val: Math.round(selectedFood.calories * quantity), label: 'kcal', color: TEXT },
                         { val: Math.round(selectedFood.protein  * quantity), label: 'Protein', color: COPPER },
-                        { val: Math.round(selectedFood.carbs    * quantity), label: 'Carbs',   color: AZURE },
+                        { val: Math.round(selectedFood.carbs    * quantity), label: 'Carbs',   color: CARBS },
                         { val: Math.round(selectedFood.fat      * quantity), label: 'Fat',     color: GOLD },
                       ].map(({ val, label, color }) => (
                         <div key={label} style={{ textAlign: 'center' }}>
