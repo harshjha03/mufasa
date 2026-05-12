@@ -29,7 +29,7 @@ export default defineConfig({
         name: 'Mufasa',
         short_name: 'Mufasa',
         description: 'Your personal fitness & nutrition tracker',
-        theme_color: '#0A9396',
+        theme_color: '#120D08',
         background_color: '#F7F4EF',
         display: 'standalone',
         orientation: 'portrait',
