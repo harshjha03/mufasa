@@ -80,15 +80,6 @@ export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 28px) 20px 28px', position: 'relative' }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 14,
-        }}>
-          <span className="ms ms-lg" style={{ fontSize: 28, color: TEXT }}>{genderIcon}</span>
-        </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, color: TEXT, letterSpacing: '-1px', lineHeight: 1, marginBottom: 6 }}>
           {profile.name || 'Athlete'}
         </h1>
