@@ -15,7 +15,7 @@ const AZURE  = '#5B8FA8'
 const SAGE   = '#7BAE8A'
 
 export default function ProgressScreen() {
-  const { weightLog, logWeight, startDate, plan } = useStore()
+  const { weightLog, logWeight, startDate, plan, prs } = useStore()
   const [weightInput, setWeightInput] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -268,6 +268,64 @@ export default function ProgressScreen() {
           </div>
         )}
       </div>
+
+      {/* ── Personal Records — visual bar chart ─────────── */}
+      {(() => {
+        const allPRs = Object.values(prs)
+        if (allPRs.length === 0) return null
+
+        const weighted = allPRs.filter(p => p.weight > 0).sort((a, b) => b.weight - a.weight)
+        const bodyweight = allPRs.filter(p => p.weight === 0).sort((a, b) => b.reps - a.reps)
+        const maxWeight = weighted.length ? Math.max(...weighted.map(p => p.weight)) : 1
+        const maxReps   = bodyweight.length ? Math.max(...bodyweight.map(p => p.reps)) : 1
+
+        const BarRow = ({ label, value, max, unit, date, color }: { label: string; value: number; max: number; unit: string; date: string; color: string }) => {
+          const pct = Math.max(8, Math.round((value / max) * 100))
+          return (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</p>
+                <p style={{ fontSize: 14, fontWeight: 800, color, letterSpacing: '-0.3px' }}>{value}{unit}</p>
+              </div>
+              <div style={{ height: 8, borderRadius: 8, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', position: 'relative' }}>
+                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 8, background: `linear-gradient(90deg, ${color}, ${color}99)`, transition: 'width 0.6s ease' }} />
+              </div>
+              <p style={{ fontSize: 10, color: MUTED, marginTop: 4 }}>{date}</p>
+            </div>
+          )
+        }
+
+        return (
+          <div style={{ margin: '0 16px 14px', background: CARD, borderRadius: 20, padding: 20, border: `1px solid ${BORDER}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Personal Records</p>
+                <p style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>{allPRs.length} exercise{allPRs.length !== 1 ? 's' : ''} tracked</p>
+              </div>
+              <span style={{ fontSize: 24 }}>🏆</span>
+            </div>
+
+            {weighted.length > 0 && (
+              <>
+                <p style={{ fontSize: 9, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Weighted lifts</p>
+                {weighted.map(pr => (
+                  <BarRow key={pr.exercise_name} label={pr.exercise_name} value={pr.weight} max={maxWeight} unit="kg" date={`${pr.reps} reps · ${pr.date}`} color={GOLD} />
+                ))}
+              </>
+            )}
+
+            {bodyweight.length > 0 && (
+              <>
+                {weighted.length > 0 && <div style={{ height: 1, background: BORDER, margin: '8px 0 16px' }} />}
+                <p style={{ fontSize: 9, fontWeight: 700, color: AZURE, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Bodyweight</p>
+                {bodyweight.map(pr => (
+                  <BarRow key={pr.exercise_name} label={pr.exercise_name} value={pr.reps} max={maxReps} unit=" reps" date={pr.date} color={AZURE} />
+                ))}
+              </>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── 12-Week Timeline ────────────────────────────── */}
       <div style={{ margin: '0 16px 14px', background: CARD, borderRadius: 20, padding: 20, border: `1px solid ${BORDER}` }}>

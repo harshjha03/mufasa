@@ -1,5 +1,4 @@
 import { useStore } from '../store/useStore'
-import ExerciseFigure from '../components/ExerciseFigure'
 
 // ── Design tokens — immersiveBronze spec ─────────────────
 const TEXT    = '#FBF6EE'
@@ -45,7 +44,7 @@ function MacroRing({ pct, label, value, color }: {
 
 // ────────────────────────────────────────────────────────
 export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) => void }) {
-  const { profile, plan, workoutDone, toggleExercise, startDate, foodLogs } = useStore()
+  const { profile, plan, workoutDone, toggleExercise, startDate, foodLogs, prs } = useStore()
 
   const now       = new Date()
   const dow       = now.getDay()
@@ -232,48 +231,70 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
               ))}
             </div>
 
-            {/* Exercise rows — flat, immersive */}
+            {/* Exercise rows — immersive, matches workout screen layout */}
             <div>
               {wo.exercises.map((ex: any, i: number) => {
                 const isDone = done[i]
+                const muscleColors: Record<string, { bg: string; text: string }> = {
+                  chest:    { bg: 'rgba(212,168,75,0.12)',  text: GOLD   },
+                  back:     { bg: 'rgba(146,194,242,0.12)', text: '#92C2F2' },
+                  legs:     { bg: 'rgba(212,144,90,0.12)',  text: '#D4905A' },
+                  quads:    { bg: 'rgba(212,144,90,0.12)',  text: '#D4905A' },
+                  glutes:   { bg: 'rgba(212,144,90,0.12)',  text: '#D4905A' },
+                  shoulders:{ bg: 'rgba(123,174,138,0.12)', text: '#7BAE8A' },
+                  core:     { bg: 'rgba(146,194,242,0.12)', text: '#92C2F2' },
+                }
+                const mKey = (ex.muscle || '').toLowerCase().split(' ')[0]
+                const mc   = muscleColors[mKey] || { bg: 'rgba(255,255,255,0.07)', text: MUTED }
+                const pr   = prs?.[ex.name?.toLowerCase?.()?.trim?.()]
                 return (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    paddingTop: i > 0 ? 16 : 0, paddingBottom: 16,
-                    borderBottom: i < wo.exercises.length - 1 ? `1px solid ${DIVIDER}` : 'none',
-                  }}>
-                    {/* Figure icon */}
-                    <div style={{
-                      width: 48, height: 48, flexShrink: 0, borderRadius: 14,
-                      background: isDone ? 'rgba(212,168,75,0.12)' : DARK_CARD,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  <button
+                    key={i}
+                    onClick={() => toggleExercise(today, i)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                      paddingTop: 13, paddingBottom: 13, textAlign: 'left', cursor: 'pointer',
+                      background: 'none', border: 'none',
+                      borderBottom: i < wo.exercises.length - 1 ? `1px solid ${DIVIDER}` : 'none',
                     }}>
-                      <ExerciseFigure anim={ex.anim} color={isDone ? GOLD : TEXT} size={30} />
+
+                    {/* Number tile */}
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                      background: isDone ? 'rgba(212,168,75,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${isDone ? 'rgba(212,168,75,0.25)' : DIVIDER}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 800, color: isDone ? GOLD : MUTED,
+                      transition: 'all 0.2s',
+                    }}>
+                      {isDone ? '✓' : i + 1}
                     </div>
 
-                    {/* Name + sets */}
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 16, fontWeight: 700, color: isDone ? MUTED : TEXT, textDecoration: isDone ? 'line-through' : 'none' }}>
+                    {/* Name + meta */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: isDone ? MUTED : TEXT, textDecoration: isDone ? 'line-through' : 'none' }}>
                         {ex.name}
                       </p>
-                      <p style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{ex.sets}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, color: MUTED }}>{ex.sets}</span>
+                        {ex.muscle && (
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.05em', background: mc.bg, color: mc.text }}>
+                            {ex.muscle}
+                          </span>
+                        )}
+                        {pr && (
+                          <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 20, background: 'rgba(228,178,106,0.1)', color: GOLD, border: '1px solid rgba(228,178,106,0.18)' }}>
+                            🏆 {pr.weight > 0 ? `${pr.weight}kg × ` : 'BW × '}{pr.reps}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Start / Done pill */}
-                    <button
-                      onClick={() => toggleExercise(today, i)}
-                      style={{
-                        flexShrink: 0,
-                        padding: '8px 18px', borderRadius: 20, cursor: 'pointer',
-                        fontSize: 13, fontWeight: 700,
-                        background: isDone ? 'rgba(255,255,255,0.07)' : GOLD,
-                        color: isDone ? MUTED : '#120D08',
-                        border: isDone ? `1px solid rgba(255,255,255,0.1)` : 'none',
-                        transition: 'all 0.2s',
-                      }}>
+                    <div style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: isDone ? 'rgba(255,255,255,0.07)' : GOLD, color: isDone ? MUTED : '#120D08', border: isDone ? `1px solid rgba(255,255,255,0.1)` : 'none' }}>
                       {isDone ? 'Done ✓' : 'Start'}
-                    </button>
-                  </div>
+                    </div>
+                  </button>
                 )
               })}
             </div>

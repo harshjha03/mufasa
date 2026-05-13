@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { User } from '@supabase/supabase-js'
-import type { Profile, AIPlan, WeightEntry, Expense, WorkoutDone, FoodLog } from '../types'
+import type { Profile, AIPlan, WeightEntry, Expense, WorkoutDone, FoodLog, PersonalRecord } from '../types'
 import { sb } from '../lib/supabase'
 import { generateAIPlan, calcMacros } from '../lib/gemini'
 import { estimateBudgetAI } from '../lib/aiFood'
@@ -17,6 +17,7 @@ interface AppState {
   selectedDay: number
   loading: boolean
   generatingPlan: boolean
+  prs: Record<string, PersonalRecord>  // key = exercise_name lowercase
   setUser: (user: User | null) => void
   setSelectedDay: (day: number) => void
   setLoading: (v: boolean) => void
@@ -30,6 +31,7 @@ interface AppState {
   addFoodLog: (log: Omit<FoodLog, 'id'>) => Promise<void>
   deleteFoodLog: (id: string) => Promise<void>
   loadFoodLogs: (date: string) => Promise<void>
+  logPR: (exerciseName: string, weight: number, reps: number) => boolean  // returns true if new PR
   signOut: () => Promise<void>
   deactivateAccount: () => Promise<void>
   restoreAccount: () => Promise<void>
@@ -39,6 +41,7 @@ export const useStore = create<AppState>((set, get) => ({
   user: null, profile: null, plan: null, weightLog: [], workoutDone: {},
   expenses: [], foodLogs: [], startDate: null,
   selectedDay: new Date().getDay(), loading: true, generatingPlan: false,
+  prs: JSON.parse(localStorage.getItem('mufasa_prs') || '{}'),
 
   setUser: (user) => set({ user }),
   setSelectedDay: (day) => set({ selectedDay: day }),
@@ -113,7 +116,7 @@ export const useStore = create<AppState>((set, get) => ({
         food_name: r.food_name, serving_label: r.serving_label,
         serving_grams: r.serving_grams, calories: parseFloat(r.calories),
         protein: parseFloat(r.protein), carbs: parseFloat(r.carbs),
-        fat: parseFloat(r.fat), quantity: r.quantity || 1,
+        fat: parseFloat(r.fat), quantity: 1,
       }))
       const startDate = weightLog.length > 0 ? weightLog[0].date : new Date().toISOString().split('T')[0]
       set({ weightLog, workoutDone, expenses, foodLogs, startDate, loading: false })
@@ -130,7 +133,7 @@ export const useStore = create<AppState>((set, get) => ({
       id: r.id, date: r.date, meal_slot: r.meal_slot, food_name: r.food_name,
       serving_label: r.serving_label, serving_grams: r.serving_grams,
       calories: parseFloat(r.calories), protein: parseFloat(r.protein),
-      carbs: parseFloat(r.carbs), fat: parseFloat(r.fat), quantity: r.quantity || 1,
+      carbs: parseFloat(r.carbs), fat: parseFloat(r.fat), quantity: 1,
     }))
     set({ foodLogs })
   },
@@ -238,20 +241,50 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addFoodLog: async (log) => {
-    const { user, foodLogs } = get(); if (!user) return
-    const { data } = await sb.from('food_logs').insert({
+    const { user, foodLogs } = get()
+    // Optimistic update — show immediately in UI
+    const tempId = 'temp_' + Date.now()
+    set({ foodLogs: [...foodLogs, { ...log, id: tempId }] })
+    if (!user) return  // no auth — stay with optimistic entry
+    const { data, error } = await sb.from('food_logs').insert({
       user_id: user.id, date: log.date, meal_slot: log.meal_slot,
       food_name: log.food_name, serving_label: log.serving_label,
       serving_grams: log.serving_grams, calories: log.calories,
-      protein: log.protein, carbs: log.carbs, fat: log.fat, quantity: log.quantity || 1,
+      protein: log.protein, carbs: log.carbs, fat: log.fat,
     }).select().single()
-    if (data) set({ foodLogs: [...foodLogs, { ...log, id: data.id }] })
+    if (data) {
+      // Replace temp entry with persisted one (real id)
+      set({ foodLogs: get().foodLogs.map(f => f.id === tempId ? { ...log, id: data.id } : f) })
+    } else if (error) {
+      // Revert optimistic update on failure
+      set({ foodLogs: get().foodLogs.filter(f => f.id !== tempId) })
+      throw new Error(error.message)
+    }
   },
 
   deleteFoodLog: async (id) => {
     const { user, foodLogs } = get(); if (!user) return
     await sb.from('food_logs').delete().eq('id', id).eq('user_id', user.id)
     set({ foodLogs: foodLogs.filter(f => f.id !== id) })
+  },
+
+  logPR: (exerciseName, weight, reps) => {
+    const { prs } = get()
+    const key = exerciseName.toLowerCase().trim()
+    const existing = prs[key]
+    // A PR is better if: higher weight, or same weight with more reps
+    const isNewPR = !existing
+      || weight > existing.weight
+      || (weight === existing.weight && reps > existing.reps)
+    if (isNewPR) {
+      const updated = {
+        ...prs,
+        [key]: { exercise_name: exerciseName, weight, reps, date: new Date().toISOString().split('T')[0] }
+      }
+      set({ prs: updated })
+      localStorage.setItem('mufasa_prs', JSON.stringify(updated))
+    }
+    return isNewPR
   },
 
   deactivateAccount: async () => {

@@ -233,17 +233,82 @@ function validateAnim(anim: string): string {
   return valid.includes(anim) ? anim : 'squat'
 }
 
-// Rule-based fallback if AI fails
+// Rule-based fallback if AI fails — fully personalised by profile
 function fallbackPlan(profile: Profile, macros: ReturnType<typeof calcMacros>): AIPlan {
   const { calories, protein, carbs, fat } = macros
   const dist = [0.10, 0.20, 0.30, 0.10, 0.20, 0.10]
+
+  // ── Wake / sleep times ─────────────────────────────────────
+  const wake  = profile.wake_time  || '06:00'
+  const sleep = profile.sleep_time || '22:30'
+  const wakeH = parseInt(wake.split(':')[0])
+  const fmt   = (h: number, m = 0) => {
+    const hr = ((h % 24) + 24) % 24
+    return `${hr % 12 === 0 ? 12 : hr % 12}:${String(m).padStart(2, '0')} ${hr < 12 ? 'AM' : 'PM'}`
+  }
+
+  // ── Meal templates by diet type ────────────────────────────
+  const isVeg   = profile.diet_type === 'vegetarian'
+  const isVegan = profile.diet_type === 'vegan'
+  const hasEgg  = !isVeg && !isVegan  // non_veg or eggetarian
+
+  const proteinFood = isVegan
+    ? { main: 'Tofu scramble 150g + 1 glass soy milk', swap: 'Moong dal chilla 2 pcs + peanut butter 1 tbsp' }
+    : isVeg
+    ? { main: '100g paneer bhurji + 1 glass milk', swap: '2 moong dal chilla + curd 100g' }
+    : hasEgg
+    ? { main: '4 boiled eggs + 1 glass milk', swap: '3 eggs omelette + 100g paneer' }
+    : { main: '150g grilled chicken + 1 glass milk', swap: '4 boiled eggs + 100g paneer' }
+
+  const lunchFood = isVegan
+    ? { main: '150g rajma/chhole + 1 cup brown rice + sabzi', swap: '2 whole wheat roti + tofu sabzi + dal' }
+    : isVeg
+    ? { main: '150g dal + 1 cup rice + sabzi + curd 100g', swap: 'Rajma + 2 roti + curd' }
+    : { main: '150g chicken/fish + 1 cup rice + dal + sabzi', swap: '4 eggs bhurji + 2 roti + dal' }
+
+  const dinnerFood = isVegan
+    ? { main: '2 whole wheat roti + moong dal + mixed sabzi', swap: 'Khichdi (rice + moong) + pickle' }
+    : isVeg
+    ? { main: '2 roti + dal + sabzi + curd', swap: 'Paneer sabzi + 1 roti + dal soup' }
+    : { main: '150g chicken/fish + 2 roti + sabzi', swap: '3 eggs + 2 roti + dal' }
+
+  const nightFood = isVegan
+    ? { main: '1 glass soy/almond milk + handful almonds', swap: 'Banana + peanut butter 1 tbsp' }
+    : isVeg
+    ? { main: '1 glass warm milk + 5 soaked almonds', swap: '100g curd + 1 tsp honey' }
+    : { main: '1 glass milk + 5 almonds', swap: '100g curd + banana' }
+
   const mealTemplates = [
-    { time: '6:30 AM', name: 'Pre-Workout', food: '1 banana + 1 scoop whey in water', swaps: [{ name: 'Oats + whey', macros: 'Higher carbs', badge: 'Option' }] },
-    { time: '8:15 AM', name: 'Post-Gym', food: '4 boiled eggs + 1 glass milk', swaps: [{ name: '3 eggs + 100g paneer', macros: 'Higher protein', badge: 'Option' }] },
-    { time: '1:00 PM', name: 'Lunch', food: 'Dal + rice + sabzi + curd', swaps: [{ name: 'Rajma + 2 roti + curd', macros: 'Higher protein', badge: 'Option' }] },
-    { time: '4:30 PM', name: 'Snack', food: 'Roasted chana 50g', swaps: [{ name: 'Makhana 40g', macros: 'Lighter', badge: 'Option' }] },
-    { time: '9:00 PM', name: 'Dinner', food: '2 roti + dal + sabzi + curd', swaps: [{ name: 'Khichdi + curd', macros: 'Easy digestion', badge: 'Option' }] },
-    { time: 'Before Bed', name: 'Night', food: '1 glass milk', swaps: [] },
+    {
+      time: fmt(wakeH + 1), name: 'Morning',
+      food: isVegan ? 'Banana + overnight oats in almond milk' : 'Banana + oats 50g + 1 tsp peanut butter',
+      swaps: [{ name: 'Poha + 1 glass milk', macros: 'Lighter start', badge: 'Option' }]
+    },
+    {
+      time: fmt(wakeH + 2, 30), name: 'Post-Workout',
+      food: proteinFood.main,
+      swaps: [{ name: proteinFood.swap, macros: 'Higher protein', badge: 'Option' }]
+    },
+    {
+      time: '1:00 PM', name: 'Lunch',
+      food: lunchFood.main,
+      swaps: [{ name: lunchFood.swap, macros: 'Higher protein', badge: 'Option' }]
+    },
+    {
+      time: '5:00 PM', name: 'Snack',
+      food: isVegan ? 'Roasted chana 40g + 1 fruit' : 'Roasted chana 40g + curd 100g',
+      swaps: [{ name: 'Makhana 30g + green tea', macros: 'Lighter', badge: 'Lighter' }]
+    },
+    {
+      time: fmt(parseInt(sleep.split(':')[0]) - 2), name: 'Dinner',
+      food: dinnerFood.main,
+      swaps: [{ name: dinnerFood.swap, macros: 'Easy digestion', badge: 'Option' }]
+    },
+    {
+      time: fmt(parseInt(sleep.split(':')[0]) - 1), name: 'Before Bed',
+      food: nightFood.main,
+      swaps: [{ name: nightFood.swap, macros: 'Alternative', badge: 'Option' }]
+    },
   ]
 
   const meals: Meal[] = mealTemplates.map((t, i) => ({
@@ -252,23 +317,162 @@ function fallbackPlan(profile: Profile, macros: ReturnType<typeof calcMacros>): 
     p: Math.round(protein * dist[i]),
     c: Math.round(carbs * dist[i]),
     f: Math.round(fat * dist[i]),
-    swaps: t.swaps
+    swaps: t.swaps,
   }))
 
-  const defaultWorkout: Record<number, WorkoutDay | null> = {
-    0: null,
-    1: { name: 'Push Day', exercises: [{ name: 'Bench Press', sets: '4x10', muscle: 'Chest', anim: 'press' }, { name: 'Overhead Press', sets: '3x10', muscle: 'Shoulders', anim: 'press' }, { name: 'Lateral Raises', sets: '3x15', muscle: 'Side Delts', anim: 'raise' }, { name: 'Tricep Pushdown', sets: '3x12', muscle: 'Triceps', anim: 'pull' }] },
-    2: { name: 'Pull Day', exercises: [{ name: 'Pull-ups', sets: '4x8', muscle: 'Lats', anim: 'pull' }, { name: 'Cable Row', sets: '3x10', muscle: 'Back', anim: 'row' }, { name: 'Barbell Curl', sets: '3x10', muscle: 'Biceps', anim: 'curl' }, { name: 'Face Pulls', sets: '3x15', muscle: 'Rear Delt', anim: 'pull' }] },
-    3: { name: 'Legs + Core', exercises: [{ name: 'Squat', sets: '4x10', muscle: 'Quads', anim: 'squat' }, { name: 'Romanian Deadlift', sets: '4x12', muscle: 'Hamstrings', anim: 'hinge' }, { name: 'Calf Raises', sets: '4x20', muscle: 'Calves', anim: 'squat' }, { name: 'Plank', sets: '3x45s', muscle: 'Core', anim: 'plank' }] },
-    4: null,
-    5: { name: 'Push + Conditioning', exercises: [{ name: 'Bench Press', sets: '4x10', muscle: 'Chest', anim: 'press' }, { name: 'Overhead Press', sets: '3x10', muscle: 'Shoulders', anim: 'press' }, { name: 'Sprint Intervals', sets: '8 rounds', muscle: 'Cardio', anim: 'run' }] },
-    6: { name: 'Pull Day', exercises: [{ name: 'Pull-ups', sets: '4x8', muscle: 'Lats', anim: 'pull' }, { name: 'Cable Row', sets: '3x10', muscle: 'Back', anim: 'row' }, { name: 'Hammer Curl', sets: '3x12', muscle: 'Biceps', anim: 'curl' }] },
+  // ── Workout templates by gym access + goal ─────────────────
+  const isHome = profile.gym_access === 'home'
+  const isNone = profile.gym_access === 'none'
+  const isLose = profile.goal === 'lose'
+  const isGain = profile.goal === 'gain'
+  const isBeginner = profile.activity_level === 'sedentary' || profile.activity_level === 'light'
+  const sets = isBeginner ? '3x10' : '4x10'
+  const heavySets = isBeginner ? '3x8' : '4x8'
+
+  // Push exercises
+  const pushEx: Exercise[] = isNone
+    ? [
+        { name: 'Push-ups', sets, muscle: 'Chest', anim: 'press' },
+        { name: 'Wide Push-ups', sets: '3x12', muscle: 'Chest', anim: 'press' },
+        { name: 'Pike Push-ups', sets: '3x10', muscle: 'Shoulders', anim: 'press' },
+        { name: 'Tricep Dips (chair)', sets: '3x12', muscle: 'Triceps', anim: 'pull' },
+      ]
+    : isHome
+    ? [
+        { name: 'Dumbbell Bench Press', sets, muscle: 'Chest', anim: 'press' },
+        { name: 'Dumbbell Shoulder Press', sets, muscle: 'Shoulders', anim: 'press' },
+        { name: 'Dumbbell Lateral Raises', sets: '3x15', muscle: 'Side Delts', anim: 'raise' },
+        { name: 'Tricep Overhead Extension', sets: '3x12', muscle: 'Triceps', anim: 'press' },
+      ]
+    : [
+        { name: 'Bench Press', sets, muscle: 'Chest', anim: 'press' },
+        { name: 'Overhead Press', sets, muscle: 'Shoulders', anim: 'press' },
+        { name: 'Lateral Raises', sets: '3x15', muscle: 'Side Delts', anim: 'raise' },
+        { name: 'Tricep Pushdown', sets: '3x12', muscle: 'Triceps', anim: 'pull' },
+      ]
+
+  // Pull exercises
+  const pullEx: Exercise[] = isNone
+    ? [
+        { name: 'Pull-ups', sets: heavySets, muscle: 'Lats', anim: 'pull' },
+        { name: 'Inverted Rows (table)', sets: '3x10', muscle: 'Back', anim: 'row' },
+        { name: 'Chin-ups', sets: '3x8', muscle: 'Biceps', anim: 'pull' },
+        { name: 'Superman Hold', sets: '3x30s', muscle: 'Lower Back', anim: 'hinge' },
+      ]
+    : isHome
+    ? [
+        { name: 'Pull-ups', sets: heavySets, muscle: 'Lats', anim: 'pull' },
+        { name: 'Dumbbell Row', sets, muscle: 'Back', anim: 'row' },
+        { name: 'Dumbbell Curl', sets: '3x12', muscle: 'Biceps', anim: 'curl' },
+        { name: 'Dumbbell Reverse Fly', sets: '3x15', muscle: 'Rear Delt', anim: 'raise' },
+      ]
+    : [
+        { name: 'Lat Pulldown', sets, muscle: 'Lats', anim: 'pull' },
+        { name: 'Cable Row', sets, muscle: 'Back', anim: 'row' },
+        { name: 'Barbell Curl', sets: '3x10', muscle: 'Biceps', anim: 'curl' },
+        { name: 'Face Pulls', sets: '3x15', muscle: 'Rear Delt', anim: 'pull' },
+      ]
+
+  // Leg exercises
+  const legEx: Exercise[] = isNone
+    ? [
+        { name: 'Bodyweight Squat', sets: '4x15', muscle: 'Quads', anim: 'squat' },
+        { name: 'Bulgarian Split Squat', sets: '3x10', muscle: 'Quads', anim: 'squat' },
+        { name: 'Glute Bridge', sets: '3x20', muscle: 'Glutes', anim: 'hinge' },
+        { name: 'Plank', sets: '3x45s', muscle: 'Core', anim: 'plank' },
+      ]
+    : isHome
+    ? [
+        { name: 'Dumbbell Squat', sets, muscle: 'Quads', anim: 'squat' },
+        { name: 'Romanian Deadlift (DBs)', sets: '3x12', muscle: 'Hamstrings', anim: 'hinge' },
+        { name: 'Dumbbell Lunges', sets: '3x12', muscle: 'Glutes', anim: 'squat' },
+        { name: 'Plank', sets: '3x45s', muscle: 'Core', anim: 'plank' },
+      ]
+    : [
+        { name: 'Barbell Squat', sets, muscle: 'Quads', anim: 'squat' },
+        { name: 'Romanian Deadlift', sets: '4x12', muscle: 'Hamstrings', anim: 'hinge' },
+        { name: 'Leg Press', sets: '3x12', muscle: 'Quads', anim: 'squat' },
+        { name: 'Plank', sets: '3x45s', muscle: 'Core', anim: 'plank' },
+      ]
+
+  // Cardio / conditioning day (for fat loss)
+  const cardioEx: Exercise[] = isNone || isHome
+    ? [
+        { name: 'Jump Squats', sets: '4x15', muscle: 'Quads', anim: 'squat' },
+        { name: 'Burpees', sets: '4x10', muscle: 'Full Body', anim: 'squat' },
+        { name: 'Mountain Climbers', sets: '3x30s', muscle: 'Core', anim: 'plank' },
+        { name: 'High Knees', sets: '4x30s', muscle: 'Cardio', anim: 'run' },
+      ]
+    : [
+        { name: 'Treadmill (incline walk)', sets: '20 min', muscle: 'Cardio', anim: 'run' },
+        { name: 'Leg Press', sets: '3x15', muscle: 'Quads', anim: 'squat' },
+        { name: 'Cable Crunches', sets: '3x15', muscle: 'Core', anim: 'plank' },
+        { name: 'Sprint Intervals', sets: '8x30s', muscle: 'Cardio', anim: 'run' },
+      ]
+
+  // Build workout schedule based on frequency preference
+  const trainingDays = isBeginner ? 3 : profile.activity_level === 'moderate' ? 4 : 5
+  const restDay = null
+
+  let workout: Record<number, WorkoutDay | null>
+  if (isLose) {
+    // Fat loss: more frequency, add cardio day
+    workout = {
+      0: restDay,
+      1: { name: 'Full Body A', exercises: [...pushEx.slice(0, 2), ...pullEx.slice(0, 2), ...legEx.slice(0, 2)] },
+      2: { name: 'Cardio + Core', exercises: cardioEx },
+      3: { name: 'Full Body B', exercises: [...pushEx.slice(2), ...pullEx.slice(2), ...legEx.slice(2)] },
+      4: trainingDays >= 4 ? { name: 'Cardio + Core', exercises: cardioEx } : restDay,
+      5: trainingDays >= 5 ? { name: 'Full Body A', exercises: [...pushEx.slice(0, 2), ...pullEx.slice(0, 2), ...legEx.slice(0, 2)] } : restDay,
+      6: restDay,
+    }
+  } else if (isGain) {
+    // Muscle gain: PPL split with heavier focus
+    workout = {
+      0: restDay,
+      1: { name: 'Push Day', exercises: pushEx },
+      2: { name: 'Pull Day', exercises: pullEx },
+      3: { name: 'Legs + Core', exercises: legEx },
+      4: trainingDays <= 3 ? restDay : { name: 'Push Day (Heavy)', exercises: pushEx.map(e => ({ ...e, sets: isBeginner ? '3x8' : '5x5' })) },
+      5: trainingDays <= 4 ? restDay : { name: 'Pull Day (Heavy)', exercises: pullEx.map(e => ({ ...e, sets: isBeginner ? '3x8' : '5x5' })) },
+      6: restDay,
+    }
+  } else {
+    // Recomp: balanced PPL
+    workout = {
+      0: restDay,
+      1: { name: 'Push Day', exercises: pushEx },
+      2: { name: 'Pull Day', exercises: pullEx },
+      3: { name: 'Legs + Core', exercises: legEx },
+      4: trainingDays >= 4 ? { name: 'Cardio + Core', exercises: cardioEx } : restDay,
+      5: trainingDays >= 5 ? { name: 'Push + Pull', exercises: [...pushEx.slice(0, 2), ...pullEx.slice(0, 2)] } : restDay,
+      6: restDay,
+    }
   }
+
+  // ── Personalised tips ──────────────────────────────────────
+  const goalTip = isLose
+    ? `You're in a ~${macros.tdee - macros.calories} kcal deficit. Weigh yourself weekly at the same time — expect −0.5 to −1 kg/month.`
+    : isGain
+    ? `You're in a ~${macros.calories - macros.tdee} kcal surplus. Track lifts weekly — if you're not adding reps/weight, eat more.`
+    : 'Recomp is slow — trust the process. Body fat drops and muscle builds simultaneously over 3–6 months.'
+
+  const gymTip = isNone
+    ? 'No equipment needed — bodyweight done right beats a bad gym session. Focus on tempo: 3 sec down, 1 sec up.'
+    : isHome
+    ? 'Home training works. Invest in adjustable dumbbells and a pull-up bar — that unlocks 90% of all exercises.'
+    : 'Log every lift. Progressive overload (one more rep or 2.5kg more per week) is the only real driver of growth.'
+
+  const dietTip = isVegan
+    ? 'Combine rice + dal in every meal — together they form a complete amino acid profile. Add flaxseeds for omega-3.'
+    : isVeg
+    ? 'Paneer + milk + curd across meals gets you to your protein target. Don\'t skip curd — it aids digestion and recovery.'
+    : `Aim for ${Math.round(macros.protein / 6)}g protein per meal across 6 meals to hit your ${macros.protein}g daily target.`
 
   return {
     ...macros,
     meals,
-    workout: defaultWorkout,
+    workout,
     warmup: [
       { name: 'Cat-Cow', sets: '10 reps', muscle: 'Spine', anim: 'hinge' },
       { name: "Child's Pose", sets: '45 sec', muscle: 'Back', anim: 'squat' },
@@ -276,11 +480,7 @@ function fallbackPlan(profile: Profile, macros: ReturnType<typeof calcMacros>): 
       { name: 'Hamstring Stretch', sets: '45 sec each', muscle: 'Hamstrings', anim: 'hinge' },
       { name: 'Thoracic Rotation', sets: '10 each side', muscle: 'Thoracic Spine', anim: 'rotate' },
     ],
-    tips: [
-      'Sleep 8 hours — growth happens at night, not the gym.',
-      'Progressive overload every week — one more rep or slightly more weight.',
-      'Protein in every meal without exception.',
-    ],
+    tips: [goalTip, gymTip, dietTip],
     generatedAt: new Date().toISOString(),
   } as AIPlan
 }

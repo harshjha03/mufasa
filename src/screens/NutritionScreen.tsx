@@ -68,6 +68,8 @@ export default function NutritionScreen() {
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null)
   const [quantity, setQuantity]         = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [logLoading, setLogLoading]   = useState(false)
+  const [logError, setLogError]       = useState<string | null>(null)
   const searchTimeout = useRef<any>(null)
   const today = new Date().toISOString().split('T')[0]
 
@@ -104,19 +106,26 @@ export default function NutritionScreen() {
   const targetF   = plan?.fat      ?? 60
 
   const handleAddFood = async () => {
-    if (!selectedFood) return
-    await addFoodLog({
-      date: today, meal_slot: selectedSlot,
-      food_name:      selectedFood.name,
-      serving_label:  selectedFood.serving_label,
-      serving_grams:  selectedFood.serving_grams * quantity,
-      calories:       selectedFood.calories * quantity,
-      protein:        selectedFood.protein  * quantity,
-      carbs:          selectedFood.carbs    * quantity,
-      fat:            selectedFood.fat      * quantity,
-      quantity,
-    })
-    setShowAddModal(false); setSelectedFood(null); setSearchQuery(''); setQuantity(1)
+    if (!selectedFood || logLoading) return
+    setLogLoading(true); setLogError(null)
+    try {
+      await addFoodLog({
+        date: today, meal_slot: selectedSlot,
+        food_name:      selectedFood.name,
+        serving_label:  selectedFood.serving_label,
+        serving_grams:  selectedFood.serving_grams * quantity,
+        calories:       selectedFood.calories * quantity,
+        protein:        selectedFood.protein  * quantity,
+        carbs:          selectedFood.carbs    * quantity,
+        fat:            selectedFood.fat      * quantity,
+        quantity,
+      })
+      setShowAddModal(false); setSelectedFood(null); setSearchQuery(''); setQuantity(1)
+    } catch (e: any) {
+      setLogError(e?.message || 'Failed to log food. Try again.')
+    } finally {
+      setLogLoading(false)
+    }
   }
 
   const calStatus = () => {
@@ -390,13 +399,14 @@ export default function NutritionScreen() {
       {showAddModal && (
         <div
           onClick={e => { if (e.target === e.currentTarget) { setShowAddModal(false); setSelectedFood(null) } }}
-          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.7)' }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}>
           <div style={{
-            background: '#1A1208', borderRadius: '28px 28px 0 0', marginTop: 'auto',
+            background: '#1A1208', borderRadius: '28px 28px 0 0',
+            width: '100%', maxWidth: 480,
             maxHeight: '88vh', overflowY: 'auto', border: `1px solid ${BORDER}`,
             borderBottom: 'none',
           }}>
-            <div style={{ padding: '20px 20px 8px' }}>
+            <div style={{ padding: '20px 20px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px) + 100px, 100px)' }}>
               {/* Handle */}
               <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.12)', borderRadius: 4, margin: '0 auto 20px' }} />
 
@@ -509,15 +519,26 @@ export default function NutritionScreen() {
                     </div>
                   </div>
 
+                  {logError && (
+                    <p style={{ fontSize: 12, color: DANGER, marginBottom: 12, textAlign: 'center' }}>{logError}</p>
+                  )}
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => setSelectedFood(null)} style={{
+                    <button onClick={() => setSelectedFood(null)} disabled={logLoading} style={{
                       flexShrink: 0, background: ELEV, color: MUTED, fontWeight: 700, fontSize: 13,
                       padding: '14px 18px', borderRadius: 14, cursor: 'pointer', border: `1px solid ${BORDER}`,
+                      opacity: logLoading ? 0.5 : 1,
                     }}>← Back</button>
-                    <button onClick={handleAddFood} style={{
+                    <button onClick={handleAddFood} disabled={logLoading} style={{
                       flex: 1, background: GOLD, color: '#120D08', fontWeight: 800, fontSize: 14,
                       padding: '14px 0', borderRadius: 14, cursor: 'pointer',
-                    }}>Log This →</button>
+                      opacity: logLoading ? 0.7 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    }}>
+                      {logLoading
+                        ? <><span className="ms ms-sm" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>refresh</span> Logging...</>
+                        : 'Log This →'
+                      }
+                    </button>
                   </div>
                 </div>
               )}

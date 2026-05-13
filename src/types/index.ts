@@ -127,6 +127,13 @@ export interface WorkoutDone {
   [dateKey: string]: { [exerciseIndex: number]: boolean }
 }
 
+export interface PersonalRecord {
+  exercise_name: string
+  weight: number   // kg (0 = bodyweight)
+  reps: number
+  date: string     // ISO yyyy-mm-dd
+}
+
 export type ActivityLevel = Profile['activity_level']
 export type Goal = Profile['goal']
 export type Gender = Profile['gender']
