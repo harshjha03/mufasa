@@ -749,21 +749,6 @@ export default function WorkoutScreen() {
             </div>
           )}
 
-          {/* Start Workout CTA
-          {wo && (
-            <div style={{ padding: '20px 16px 8px' }}>
-              <button style={{
-                width: '100%', padding: '18px 0', borderRadius: 18,
-                background: GOLD, color: '#1B1714',
-                fontSize: 16, fontWeight: 800, letterSpacing: '-0.3px',
-                cursor: 'pointer', border: 'none',
-                boxShadow: '0 4px 20px rgba(228,178,106,0.35)',
-              }}>
-                Start Workout
-              </button>
-            </div>
-          )} */}
-
           {/* PR Modal */}
           {prModal && (
             <PRModal
