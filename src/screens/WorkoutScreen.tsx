@@ -350,7 +350,7 @@ const COPPER  = '#D4905A'
 const SAGE    = '#7BAE8A'
 
 export default function WorkoutScreen() {
-  const { plan, workoutDone, toggleExercise, selectedDay, setSelectedDay, prs, logPR } = useStore()
+  const { plan, workoutDone, toggleExercise, selectedDay, setSelectedDay, prs, logPR, user, setShowAuthModal } = useStore()
   const [view, setView]           = useState<'week' | 'day'>('day')
   const [openEx, setOpenEx]       = useState<number | null>(null)
   const [prModal, setPrModal]     = useState<{ name: string; muscle: string; anim: string } | null>(null)
@@ -679,7 +679,7 @@ export default function WorkoutScreen() {
                       </div>
 
                       <button
-                        onClick={e => { e.stopPropagation(); setPrModal({ name: ex.name, muscle: ex.muscle, anim: ex.anim }) }}
+                        onClick={e => { e.stopPropagation(); if (!user) { setShowAuthModal(true); return; } setPrModal({ name: ex.name, muscle: ex.muscle, anim: ex.anim }) }}
                         style={{ flexShrink: 0, padding: '7px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', background: 'rgba(228,178,106,0.1)', color: GOLD, border: '1px solid rgba(228,178,106,0.2)' }}>
                         Log set
                       </button>

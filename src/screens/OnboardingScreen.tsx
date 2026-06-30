@@ -9,19 +9,17 @@ const FAINT   = 'rgba(251,246,238,0.22)'
 const DIVIDER = 'rgba(255,255,255,0.09)'
 const GOLD    = '#E4B26A'
 const DANGER  = '#E05252'
-const INPUT_BG   = 'rgba(255,255,255,0.07)'
+const INPUT_BG     = 'rgba(255,255,255,0.07)'
 const INPUT_BORDER = 'rgba(255,255,255,0.12)'
 const INPUT_FOCUS  = 'rgba(228,178,106,0.5)'
-
-const TOTAL_STEPS = 6
 
 interface ObData {
   name: string; age: string; gender: string; weight: string; height: string
   activity: string; goal: string; sport: string; sport_frequency: string
   injuries: string; wake_time: string; sleep_time: string
-  gym_access: string; diet_type: string; monthly_budget: string; body_type: string
+  gym_access: string; diet_type: string; body_type: string
 }
-interface Props { onDone?: () => void }
+interface Props { onDone?: () => void; onSkip?: () => void; initialStep?: number }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -82,31 +80,35 @@ function OptionBtn({ selected, onClick, icon, label, sub }: {
   )
 }
 
-export default function OnboardingScreen({ onDone }: Props) {
-  const { saveProfile, profile } = useStore()
+export default function OnboardingScreen({ onDone, onSkip, initialStep = 0 }: Props) {
+  const { saveProfile, profile, user } = useStore()
+  const isLoggedIn = !!user
 
-  const [step, setStep] = useState(0)
+  // Anonymous: 2 steps (name+age, gender)
+  // Logged-in: 6 steps (name+age, gender, measurements, activity, goal, preferences+lifestyle)
+  const TOTAL_STEPS = isLoggedIn ? 6 : 3
+
+  const [step, setStep] = useState(initialStep)
   const [data, setData] = useState<ObData>(() => profile ? {
     name: profile.name, age: String(profile.age), gender: profile.gender,
-    weight: String(profile.weight), height: String(profile.height),
-    activity: profile.activity_level, goal: profile.goal,
+    weight: String(profile.weight || ''), height: String(profile.height || ''),
+    activity: profile.activity_level || '', goal: profile.goal || '',
     sport: profile.sport || 'none', sport_frequency: profile.sport_frequency || '',
     injuries: profile.injuries || 'none', wake_time: profile.wake_time || '6:00 AM',
     sleep_time: profile.sleep_time || '10:30 PM', gym_access: profile.gym_access || 'full_gym',
     diet_type: profile.diet_type || 'non_vegetarian',
-    monthly_budget: String(profile.monthly_budget || 5000),
     body_type: profile.body_type || 'mesomorph',
   } : {
     name: '', age: '', gender: '', weight: '', height: '',
     activity: '', goal: '', sport: '', sport_frequency: '',
     injuries: '', wake_time: '6:00 AM', sleep_time: '10:30 PM',
-    gym_access: '', diet_type: '', monthly_budget: '5000', body_type: '',
+    gym_access: '', diet_type: '', body_type: '',
   })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const set = (field: keyof ObData) => (v: string) => setData(d => ({ ...d, [field]: v }))
-  const opt = (field: keyof ObData, value: string) => () => setData(d => ({ ...d, [field]: value }))
+  const set_ = (field: keyof ObData) => (v: string) => setData(d => ({ ...d, [field]: v }))
+  const opt  = (field: keyof ObData, value: string) => () => setData(d => ({ ...d, [field]: value }))
 
   const bmi = data.weight && data.height
     ? (parseFloat(data.weight) / ((parseFloat(data.height) / 100) ** 2)).toFixed(1)
@@ -120,11 +122,14 @@ export default function OnboardingScreen({ onDone }: Props) {
     if (step === 0 && !data.name.trim()) return 'Please enter your name.'
     if (step === 0 && (!data.age || +data.age < 13 || +data.age > 80)) return 'Enter a valid age (13–80).'
     if (step === 1 && !data.gender) return 'Please select a gender.'
+    // Logged-in only steps
     if (step === 2 && (!data.weight || +data.weight < 30)) return 'Enter a valid weight.'
     if (step === 2 && (!data.height || +data.height < 100)) return 'Enter a valid height.'
-    if (step === 3 && !data.activity) return 'Please select your activity level.'
-    if (step === 4 && !data.goal) return 'Please select your goal.'
-    if (step === 5 && !data.diet_type) return 'Please select diet type.'
+    if (isLoggedIn) {
+      if (step === 3 && !data.activity) return 'Please select your activity level.'
+      if (step === 4 && !data.goal) return 'Please select your goal.'
+      if (step === 5 && !data.diet_type) return 'Please select diet type.'
+    }
     return ''
   }
 
@@ -133,20 +138,38 @@ export default function OnboardingScreen({ onDone }: Props) {
     if (err) { setError(err); return }
     setError('')
     if (step < TOTAL_STEPS - 1) { setStep(s => s + 1); return }
+
+    // Final step — save profile
     setSaving(true)
-    const p: Profile = {
-      name: data.name, age: +data.age, gender: data.gender as Profile['gender'],
-      weight: +data.weight, height: +data.height,
-      activity_level: data.activity as Profile['activity_level'],
-      goal: data.goal as Profile['goal'],
-      sport: data.sport, sport_frequency: data.sport_frequency || undefined,
-      injuries: data.injuries || 'none',
-      wake_time: data.wake_time, sleep_time: data.sleep_time,
-      gym_access: data.gym_access as Profile['gym_access'],
-      diet_type: data.diet_type as Profile['diet_type'],
-      monthly_budget: +data.monthly_budget || 5000,
-      body_type: data.body_type as Profile['body_type'] || 'mesomorph',
+    let p: Profile
+
+    if (!isLoggedIn) {
+      // Anonymous: only name, age, gender — store fills defaults
+      p = {
+        name: data.name,
+        age: +data.age,
+        gender: data.gender as Profile['gender'],
+        weight: +data.weight,
+        height: +data.height,
+        activity_level: 'moderate',
+        goal: 'recomp',
+      } as Profile
+    } else {
+      // Logged-in: full profile
+      p = {
+        name: data.name, age: +data.age, gender: data.gender as Profile['gender'],
+        weight: +data.weight, height: +data.height,
+        activity_level: data.activity as Profile['activity_level'],
+        goal: data.goal as Profile['goal'],
+        sport: data.sport || 'none', sport_frequency: data.sport_frequency || undefined,
+        injuries: data.injuries || 'none',
+        wake_time: data.wake_time, sleep_time: data.sleep_time,
+        gym_access: data.gym_access as Profile['gym_access'],
+        diet_type: data.diet_type as Profile['diet_type'],
+        body_type: data.body_type as Profile['body_type'] || 'mesomorph',
+      }
     }
+
     try {
       await saveProfile(p)
       setSaving(false)
@@ -157,7 +180,9 @@ export default function OnboardingScreen({ onDone }: Props) {
     }
   }
 
-  const stepTitles = ['Basic info', 'Gender', 'Measurements', 'Activity level', 'Your goal', 'Preferences']
+  const anonStepTitles    = ['Your name', 'Your gender', 'Measurements']
+  const loggedInStepTitles = ['Basic info', 'Gender', 'Measurements', 'Activity level', 'Your goal', 'Preferences']
+  const stepTitles = isLoggedIn ? loggedInStepTitles : anonStepTitles
 
   const renderStep = () => {
     switch (step) {
@@ -165,30 +190,44 @@ export default function OnboardingScreen({ onDone }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Hey, what's your name?</h2>
-            <p style={{ fontSize: 13, color: MUTED }}>We'll personalise everything for you</p>
+            <p style={{ fontSize: 13, color: MUTED }}>
+              {isLoggedIn ? "We'll personalise everything for you" : "We'll build a free personalised plan for you"}
+            </p>
           </div>
-          <StableInput label="Full Name" value={data.name} onChange={set('name')} placeholder="e.g. Rohan Sharma" />
-          <StableInput label="Age" value={data.age} onChange={set('age')} type="number" placeholder="e.g. 25" inputMode="numeric" />
+          <StableInput label="Full Name" value={data.name} onChange={set_('name')} placeholder="e.g. Rohan Sharma" />
+          <StableInput label="Age" value={data.age} onChange={set_('age')} type="number" placeholder="e.g. 25" inputMode="numeric" />
         </div>
       )
+
       case 1: return (
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>What's your gender?</h2>
-          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Affects metabolic rate calculation</p>
+          <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>
+            {isLoggedIn ? 'Affects metabolic rate calculation' : 'Helps us estimate calorie targets'}
+          </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <OptionBtn selected={data.gender === 'male'}   onClick={opt('gender', 'male')}   icon="male"        label="Male" />
             <OptionBtn selected={data.gender === 'female'} onClick={opt('gender', 'female')} icon="female"      label="Female" />
             <OptionBtn selected={data.gender === 'other'}  onClick={opt('gender', 'other')}  icon="transgender" label="Other / Prefer not to say" />
           </div>
+          {!isLoggedIn && (
+            <div style={{ marginTop: 20, background: 'rgba(228,178,106,0.08)', borderRadius: 14, padding: '12px 16px', border: '1px solid rgba(228,178,106,0.2)' }}>
+              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
+                <span style={{ color: GOLD, fontWeight: 700 }}>Sign in</span> after to add your measurements, goals, and lifestyle for a more personalised plan.
+              </p>
+            </div>
+          )}
         </div>
       )
+
+      // Steps 2–5 are only reached when logged in
       case 2: return (
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Your measurements</h2>
           <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>Used to calculate BMI and calorie targets</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <StableInput label="Weight (kg)" value={data.weight} onChange={set('weight')} type="number" placeholder="e.g. 75" inputMode="decimal" />
-            <StableInput label="Height (cm)" value={data.height} onChange={set('height')} type="number" placeholder="e.g. 175" inputMode="decimal" />
+            <StableInput label="Weight (kg)" value={data.weight} onChange={set_('weight')} type="number" placeholder="e.g. 75" inputMode="decimal" />
+            <StableInput label="Height (cm)" value={data.height} onChange={set_('height')} type="number" placeholder="e.g. 175" inputMode="decimal" />
           </div>
           {bmi && (
             <div style={{ background: 'rgba(228,178,106,0.1)', border: `1.5px solid rgba(228,178,106,0.3)`, borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -201,18 +240,20 @@ export default function OnboardingScreen({ onDone }: Props) {
           )}
         </div>
       )
+
       case 3: return (
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>How active are you?</h2>
           <p style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>On a typical non-gym day</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <OptionBtn selected={data.activity === 'sedentary'} onClick={opt('activity', 'sedentary')} icon="chair"          label="Sedentary"        sub="Desk job, little movement" />
-            <OptionBtn selected={data.activity === 'light'}     onClick={opt('activity', 'light')}     icon="directions_walk" label="Lightly Active"   sub="Some walking, light activity" />
-            <OptionBtn selected={data.activity === 'moderate'}  onClick={opt('activity', 'moderate')}  icon="directions_run"  label="Moderately Active" sub="Regular movement, active job" />
-            <OptionBtn selected={data.activity === 'very'}      onClick={opt('activity', 'very')}      icon="bolt"            label="Very Active"      sub="Heavy manual work or athlete" />
+            <OptionBtn selected={data.activity === 'sedentary'} onClick={opt('activity', 'sedentary')} icon="chair"           label="Sedentary"         sub="Desk job, little movement" />
+            <OptionBtn selected={data.activity === 'light'}     onClick={opt('activity', 'light')}     icon="directions_walk"  label="Lightly Active"    sub="Some walking, light activity" />
+            <OptionBtn selected={data.activity === 'moderate'}  onClick={opt('activity', 'moderate')}  icon="directions_run"   label="Moderately Active" sub="Regular movement, active job" />
+            <OptionBtn selected={data.activity === 'very'}      onClick={opt('activity', 'very')}      icon="bolt"             label="Very Active"       sub="Heavy manual work or athlete" />
           </div>
         </div>
       )
+
       case 4: return (
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>What's your main goal?</h2>
@@ -224,11 +265,12 @@ export default function OnboardingScreen({ onDone }: Props) {
           </div>
         </div>
       )
+
       case 5: return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Final details</h2>
-            <p style={{ fontSize: 13, color: MUTED }}>Almost done — just a few more things</p>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: '-0.5px', marginBottom: 4 }}>Lifestyle details</h2>
+            <p style={{ fontSize: 13, color: MUTED }}>Helps fine-tune your plan further</p>
           </div>
 
           {/* Wake / Sleep */}
@@ -256,34 +298,30 @@ export default function OnboardingScreen({ onDone }: Props) {
             </div>
           </div>
 
-          {/* Budget */}
+          {/* Gym access */}
           <div>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Monthly fitness budget</p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-              {[2000, 3000, 5000, 7000, 10000].map(amt => (
-                <button key={amt} onClick={() => setData(d => ({ ...d, monthly_budget: String(amt) }))}
-                  style={{
-                    flex: 1, minWidth: 64, padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
-                    background: data.monthly_budget === String(amt) ? 'rgba(228,178,106,0.12)' : INPUT_BG,
-                    border: `1.5px solid ${data.monthly_budget === String(amt) ? 'rgba(228,178,106,0.45)' : INPUT_BORDER}`,
-                    color: data.monthly_budget === String(amt) ? GOLD : MUTED,
-                    fontSize: 12, fontWeight: 700,
-                  }}>
-                  ₹{(amt / 1000).toFixed(0)}k
-                </button>
-              ))}
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Gym access</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <OptionBtn selected={data.gym_access === 'full_gym'} onClick={opt('gym_access', 'full_gym')} icon="fitness_center"   label="Full gym"        sub="Barbells, machines, cables" />
+              <OptionBtn selected={data.gym_access === 'home'}     onClick={opt('gym_access', 'home')}     icon="home"             label="Home workout"    sub="Dumbbells or bodyweight" />
+              <OptionBtn selected={data.gym_access === 'none'}     onClick={opt('gym_access', 'none')}     icon="directions_walk"  label="No equipment"    sub="Bodyweight only" />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`, borderRadius: 14, overflow: 'hidden' }}>
-              <span style={{ paddingLeft: 16, color: MUTED, fontWeight: 700 }}>₹</span>
-              <input style={{ flex: 1, background: 'transparent', color: TEXT, fontSize: 14, padding: '13px 8px', outline: 'none' }}
-                type="number" placeholder="custom amount" inputMode="numeric"
-                value={data.monthly_budget}
-                onChange={e => setData(d => ({ ...d, monthly_budget: e.target.value }))} />
-              <span style={{ paddingRight: 16, fontSize: 11, color: FAINT }}>/month</span>
-            </div>
+          </div>
+
+          {/* Sport (optional) */}
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Sport / activity (optional)</p>
+            <input
+              style={{ width: '100%', background: INPUT_BG, border: `1.5px solid ${INPUT_BORDER}`, borderRadius: 14, padding: '13px 16px', fontSize: 15, color: TEXT, outline: 'none', boxSizing: 'border-box' }}
+              placeholder="e.g. Cricket, Football, Swimming..."
+              value={data.sport === 'none' ? '' : data.sport}
+              onChange={e => setData(d => ({ ...d, sport: e.target.value || 'none' }))}
+              autoComplete="off"
+            />
           </div>
         </div>
       )
+
       default: return null
     }
   }
@@ -299,13 +337,19 @@ export default function OnboardingScreen({ onDone }: Props) {
       {/* Ambient glow */}
       <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
 
-      {/* Logo — only on first entry, not edit */}
+      {/* Header — logo on first entry, upgrade context when syncing anon data, nothing on edit */}
       {!onDone && (
         <div style={{ textAlign: 'center', marginBottom: 28, position: 'relative' }}>
           <div style={{ fontSize: 28, fontWeight: 800, color: TEXT, letterSpacing: '-1px' }}>
             Mu<span style={{ color: GOLD }}>fasa</span>
           </div>
           <p style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>AI-powered personalised plan</p>
+        </div>
+      )}
+      {onSkip && (
+        <div style={{ textAlign: 'center', marginBottom: 20, position: 'relative' }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: GOLD }}>Upgrade your plan</p>
+          <p style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>A few more details → more personalised results</p>
         </div>
       )}
 
@@ -368,6 +412,15 @@ export default function OnboardingScreen({ onDone }: Props) {
           </button>
         </div>
       </div>
+
+      {onSkip && (
+        <button onClick={onSkip} style={{
+          marginTop: 16, background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 13, color: MUTED, textDecoration: 'underline',
+        }}>
+          Skip for now
+        </button>
+      )}
     </div>
   )
 }

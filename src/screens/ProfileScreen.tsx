@@ -12,7 +12,7 @@ const CARD    = 'rgba(255,255,255,0.05)'
 const DANGER  = '#E05252'
 
 export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?: () => void; onEditEnd?: () => void }) {
-  const { user, profile, plan, signOut, deactivateAccount } = useStore()
+  const { user, profile, plan, signOut, deactivateAccount, setShowAuthModal } = useStore()
   const [editing, setEditing]             = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -22,6 +22,69 @@ export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?
   if (!profile || !plan) return (
     <div style={{ padding: '60px 20px', color: MUTED, fontSize: 14 }}>No profile found.</div>
   )
+
+  // Anonymous user view
+  if (!user) {
+    return (
+      <div style={{
+        minHeight: '100vh', paddingBottom: 100,
+        background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 28px) 20px 28px', position: 'relative' }}>
+          <h1 style={{ fontSize: 30, fontWeight: 800, color: TEXT, letterSpacing: '-1px', lineHeight: 1, marginBottom: 6 }}>
+            {profile.name || 'Athlete'}
+          </h1>
+          <p style={{ fontSize: 13, color: MUTED }}>
+            {profile.age} yrs · {profile.gender}
+          </p>
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            {[
+              { val: `${plan.calories.toLocaleString('en-IN')} kcal`, label: 'Daily Target' },
+              { val: `${plan.protein}g`, label: 'Protein' },
+              { val: String(plan.bmi), label: 'BMI' },
+            ].map(({ val, label }) => (
+              <div key={label} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: '10px 0', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: TEXT, lineHeight: 1 }}>{val}</p>
+                <p style={{ fontSize: 9, fontWeight: 700, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginTop: 4 }}>{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
+
+        {/* Sign-in CTA */}
+        <div style={{ padding: '24px 20px' }}>
+          <div style={{ background: 'rgba(228,178,106,0.08)', border: '1px solid rgba(228,178,106,0.2)', borderRadius: 20, padding: '20px', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: GOLD, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Unlock Full Mufasa</p>
+            {[
+              'Log workouts & track sets',
+              'Log meals & calories',
+              'Track weight & build records',
+              'Add your goals & lifestyle for a more personalised plan',
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, paddingTop: 8, paddingBottom: 8, fontSize: 13, color: MUTED, borderTop: i > 0 ? `1px solid ${DIVIDER}` : 'none' }}>
+                <span style={{ color: GOLD, fontWeight: 800 }}>→</span><span>{item}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            style={{ width: '100%', padding: '17px 0', borderRadius: 18, background: GOLD, color: '#1B1714', fontSize: 15, fontWeight: 800, cursor: 'pointer', border: 'none', marginBottom: 10, boxShadow: '0 4px 20px rgba(228,178,106,0.3)' }}>
+            Sign In with Google
+          </button>
+          <button
+            onClick={() => { setEditing(true); onEditStart?.() }}
+            style={{ width: '100%', padding: '15px 0', borderRadius: 16, background: CARD, color: MUTED, fontSize: 14, fontWeight: 700, cursor: 'pointer', border: `1px solid ${DIVIDER}` }}>
+            <span className="ms ms-sm" style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 6 }}>edit</span>
+            Edit Basic Profile
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const genderIcon = profile.gender === 'female' ? 'female' : profile.gender === 'male' ? 'male' : 'transgender'
   const goalLabels: Record<string, string> = { lose: 'Lose Fat', recomp: 'Recomposition', gain: 'Build Muscle' }

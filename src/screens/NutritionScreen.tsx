@@ -57,7 +57,7 @@ function MiniRing({ value, target, label, color, unit = 'g' }: {
 
 // ────────────────────────────────────────────────────────
 export default function NutritionScreen() {
-  const { plan, foodLogs, addFoodLog, deleteFoodLog, loadFoodLogs } = useStore()
+  const { plan, foodLogs, addFoodLog, deleteFoodLog, loadFoodLogs, user, setShowAuthModal } = useStore()
   const [tab, setTab]                 = useState<'plan' | 'log'>('plan')
   const [openMeal, setOpenMeal]       = useState<number | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast')
@@ -303,7 +303,19 @@ export default function NutritionScreen() {
       )}
 
       {/* ── LOG TAB ────────────────────────────────────── */}
-      {tab === 'log' && (
+      {tab === 'log' && !user && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
+          <span className="ms" style={{ fontSize: 48, color: 'rgba(228,178,106,0.25)', display: 'block', marginBottom: 16 }}>restaurant</span>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Log Your Meals</h3>
+          <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 28, maxWidth: 260 }}>
+            Sign in to log meals, track daily calories and macros, and build your food history.
+          </p>
+          <button onClick={() => setShowAuthModal(true)} style={{ padding: '14px 36px', borderRadius: 16, background: GOLD, color: '#120D08', fontSize: 14, fontWeight: 800, cursor: 'pointer', border: 'none', boxShadow: '0 4px 16px rgba(228,178,106,0.3)' }}>
+            Sign In to Log Meals
+          </button>
+        </div>
+      )}
+      {tab === 'log' && !!user && (
         <>
           {/* Macro rings — live progress */}
           <div style={{ margin: '0 16px 12px', background: CARD, borderRadius: 20, padding: '18px 16px', border: `1px solid ${BORDER}` }}>

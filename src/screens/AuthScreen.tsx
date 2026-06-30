@@ -1,6 +1,10 @@
 import { sb } from '../lib/supabase'
 
-export default function AuthScreen() {
+interface Props {
+  onCancel?: () => void
+}
+
+export default function AuthScreen({ onCancel }: Props) {
   const handleGoogle = async () => {
     await sb.auth.signInWithOAuth({
       provider: 'google',
@@ -12,12 +16,28 @@ export default function AuthScreen() {
     <div className="fixed inset-0 flex flex-col items-center justify-center px-6"
       style={{background: 'linear-gradient(160deg, #2A1F14 0%, #6B4F28 100%)'}}>
 
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          className="absolute top-4 left-4 flex items-center gap-2 text-white/50 text-sm font-semibold py-2 px-3 rounded-xl active:opacity-70"
+          style={{background: 'rgba(255,255,255,0.08)'}}>
+          <span className="ms ms-sm" style={{fontSize: 16}}>arrow_back</span>
+          Back
+        </button>
+      )}
+
       {/* Logo */}
       <img src="/icon-512.png" alt="Mufasa" className="w-28 h-28 rounded-3xl mb-6 shadow-2xl" />
       <h1 className="font-serif text-5xl text-white font-bold mb-2">Mufasa</h1>
-      <p className="text-sm text-white/50 mb-12 text-center leading-relaxed">
+      <p className="text-sm text-white/50 mb-4 text-center leading-relaxed">
         Your AI-powered personal fitness coach
       </p>
+
+      <div className="mb-8 px-4 py-3 rounded-2xl text-center" style={{background: 'rgba(228,178,106,0.1)', border: '1px solid rgba(228,178,106,0.2)'}}>
+        <p className="text-xs text-white/60 leading-relaxed">
+          Sign in to <span className="text-white font-semibold">log workouts, meals & track progress</span>
+        </p>
+      </div>
 
       {/* Google Sign In */}
       <button onClick={handleGoogle}

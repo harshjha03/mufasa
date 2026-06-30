@@ -14,8 +14,26 @@ const COPPER = '#D4905A'
 const AZURE  = '#5B8FA8'
 const SAGE   = '#7BAE8A'
 
+const PROGRESS_BG = 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)'
+
+function ProgressAuthGate({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div style={{ minHeight: '100vh', background: PROGRESS_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
+      <span className="ms" style={{ fontSize: 52, color: 'rgba(212,168,75,0.3)', display: 'block', marginBottom: 20 }}>trending_up</span>
+      <h2 style={{ fontSize: 24, fontWeight: 800, color: '#F0E4C8', letterSpacing: '-0.5px', marginBottom: 10 }}>Your Records</h2>
+      <p style={{ fontSize: 14, color: 'rgba(240,228,200,0.5)', lineHeight: 1.7, marginBottom: 32, maxWidth: 280 }}>
+        Sign in to track your weight, view progress charts, and build your personal records.
+      </p>
+      <button onClick={onSignIn} style={{ padding: '16px 40px', borderRadius: 18, background: '#D4A84B', color: '#120D08', fontSize: 15, fontWeight: 800, cursor: 'pointer', border: 'none', boxShadow: '0 4px 20px rgba(212,168,75,0.3)' }}>
+        Sign In to Track Progress
+      </button>
+    </div>
+  )
+}
+
 export default function ProgressScreen() {
-  const { weightLog, logWeight, startDate, plan, prs } = useStore()
+  const { weightLog, logWeight, startDate, plan, prs, user, setShowAuthModal } = useStore()
   const [weightInput, setWeightInput] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -32,7 +50,10 @@ export default function ProgressScreen() {
     setWeightInput('')
   }
 
-  useEffect(() => { drawChart() }, [weightLog])
+  useEffect(() => { if (user) drawChart() }, [weightLog, user])
+
+  // Auth gate — must come after all hooks
+  if (!user) return <ProgressAuthGate onSignIn={() => setShowAuthModal(true)} />
 
   const drawChart = () => {
     const canvas = canvasRef.current

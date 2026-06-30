@@ -42,7 +42,7 @@ function LoadingScreen() {
 
 export default function App() {
   useAuth()
-  const { user, profile, plan, loading, generatingPlan } = useStore()
+  const { profile, plan, loading, generatingPlan, showAuthModal, setShowAuthModal, showProfileUpgradePrompt, setShowProfileUpgradePrompt } = useStore()
   const [screen, setScreen] = useState('today')
   const [showLanding, setShowLanding] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
@@ -50,26 +50,25 @@ export default function App() {
 
   const navigate = (s: string) => {
     setScreen(s)
-    // Scroll to top when switching screens
     setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }), 0)
   }
 
-  // Initial loading
   if (loading) return <LoadingScreen />
 
-  if (!user) return showLanding ? <LandingScreen onGetStarted={() => setShowLanding(false)} /> : <AuthScreen />
-  if (!profile) return <OnboardingScreen />
+  // No profile yet — show landing/onboarding (works for both anon and new logged-in users)
+  if (!profile) return showLanding
+    ? <LandingScreen onGetStarted={() => setShowLanding(false)} />
+    : <OnboardingScreen />
+
   if ((profile as any).deactivated) return <DeactivatedScreen />
 
-  // AI generating plan
   if (generatingPlan) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8 text-center" style={{background: 'linear-gradient(160deg, #2A1F14 0%, #6B4F28 100%)'}}>
         <img src="/icon-512.png" alt="Mufasa" className="w-24 h-24 rounded-2xl mb-6 shadow-xl animate-pulse" />
         <h2 className="text-xl font-extrabold text-white mb-2">Building your plan</h2>
         <p className="text-sm text-white/50 leading-relaxed mb-6">
-          AI is creating a fully personalised workout, meal plan
-          {profile?.sport && profile.sport !== 'none' ? `, and ${profile.sport} protocol` : ''} just for you.
+          AI is creating a fully personalised workout and meal plan just for you.
         </p>
         <div className="flex gap-1.5">
           {[0, 1, 2].map(i => (
@@ -81,7 +80,6 @@ export default function App() {
     )
   }
 
-  // Plan must exist before showing app
   if (!plan) return (
     <div className="fixed inset-0 bg-cream flex items-center justify-center">
       <div className="w-8 h-8 border-[3px] border-cream-3 border-t-teal rounded-full animate-spin" />
@@ -107,6 +105,24 @@ export default function App() {
       </div>
       {!isEditing && <BottomNav active={screen} onChange={navigate} />}
       <InstallBanner />
+
+      {/* Auth modal — shown when anonymous user tries a logged-in-only feature */}
+      {showAuthModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100 }}>
+          <AuthScreen onCancel={() => setShowAuthModal(false)} />
+        </div>
+      )}
+
+      {/* Profile upgrade prompt — shown once after first login to collect missing measurements/goals */}
+      {showProfileUpgradePrompt && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }}>
+          <OnboardingScreen
+            initialStep={2}
+            onDone={() => setShowProfileUpgradePrompt(false)}
+            onSkip={() => setShowProfileUpgradePrompt(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }

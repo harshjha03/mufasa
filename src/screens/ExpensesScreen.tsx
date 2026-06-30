@@ -24,13 +24,34 @@ const CAT_OPTIONS = [
   { value: 'other',      label: 'Other'      },
 ] as const
 
+const EXPENSES_BG = 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)'
+
+function ExpensesAuthGate({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div style={{ minHeight: '100vh', background: EXPENSES_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
+      <span className="ms" style={{ fontSize: 52, color: 'rgba(212,168,75,0.3)', display: 'block', marginBottom: 20 }}>account_balance_wallet</span>
+      <h2 style={{ fontSize: 24, fontWeight: 800, color: '#F0E4C8', letterSpacing: '-0.5px', marginBottom: 10 }}>Expense Tracker</h2>
+      <p style={{ fontSize: 14, color: 'rgba(240,228,200,0.5)', lineHeight: 1.7, marginBottom: 32, maxWidth: 280 }}>
+        Sign in to track your gym, supplement, and food expenses across months.
+      </p>
+      <button onClick={onSignIn} style={{ padding: '16px 40px', borderRadius: 18, background: '#D4A84B', color: '#120D08', fontSize: 15, fontWeight: 800, cursor: 'pointer', border: 'none', boxShadow: '0 4px 20px rgba(212,168,75,0.3)' }}>
+        Sign In to Track Expenses
+      </button>
+    </div>
+  )
+}
+
 export default function ExpensesScreen() {
-  const { expenses, addExpense, deleteExpense, plan, profile } = useStore()
+  const { expenses, addExpense, deleteExpense, plan, profile, user, setShowAuthModal } = useStore()
   const [name,   setName]   = useState('')
   const [amount, setAmount] = useState('')
   const [cat,    setCat]    = useState<Expense['cat']>('supplement')
   const [refreshingBudget, setRefreshingBudget] = useState(false)
   const [tab, setTab] = useState<'tracker' | 'budget'>('tracker')
+
+  // Auth gate — must come after all hooks
+  if (!user) return <ExpensesAuthGate onSignIn={() => setShowAuthModal(true)} />
 
   const month         = new Date().toISOString().slice(0, 7)
   const thisMonth     = expenses.filter(e => e.month === month)

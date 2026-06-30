@@ -14,7 +14,7 @@ export interface Profile {
   wake_time?: string
   sleep_time?: string
   gym_access?: 'full_gym' | 'home' | 'none'
-  diet_type?: 'vegetarian' | 'non_vegetarian' | 'vegan'
+  diet_type?: 'vegetarian' | 'non_vegetarian' | 'vegan' | 'eggetarian'
   monthly_budget?: number
   deactivated?: boolean
   deactivated_at?: string

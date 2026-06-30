@@ -1,8 +1,7 @@
 import type { FoodItem, BudgetBreakdown, Profile } from '../types'
 
-const GEMINI_KEY = 'AIzaSyB_DNvosZuGCYPfXVOOw2S1r5l0faYvJic'
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY as string
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
-const GEMINI_SEARCH_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`
 
 async function callGemini(prompt: string, useSearch = false, retries = 2): Promise<string> {
   const body: any = {
@@ -12,8 +11,7 @@ async function callGemini(prompt: string, useSearch = false, retries = 2): Promi
   if (useSearch) {
     body.tools = [{ google_search: {} }]
   }
-  const url = useSearch ? GEMINI_SEARCH_URL : GEMINI_URL
-  const res = await fetch(url, {
+  const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -69,7 +67,7 @@ Rules:
 - category must be one of: Grains, Lentils, Dairy, Eggs, Meat, Vegetables, Fruits, Snacks, Supplements, Drinks, Meals, FastFood`
 
   try {
-    const raw = await callGroq(prompt)
+    const raw = await callGemini(prompt)
     const cleaned = raw.replace(/\`\`\`json\n?/g, '').replace(/\`\`\`\n?/g, '').trim()
     const start = cleaned.indexOf('[')
     const end = cleaned.lastIndexOf(']')

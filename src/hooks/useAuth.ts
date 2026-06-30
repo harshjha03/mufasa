@@ -3,7 +3,7 @@ import { sb } from '../lib/supabase'
 import { useStore } from '../store/useStore'
 
 export function useAuth() {
-  const { setUser, loadUserData, setLoading } = useStore()
+  const { setUser, loadUserData, setLoading, loadAnonData } = useStore()
 
   useEffect(() => {
 
@@ -11,9 +11,9 @@ export function useAuth() {
 
       if (session?.user) {
         setUser(session.user)
-        // Use setTimeout to run outside the lock context
         setTimeout(() => loadUserData(session.user!.id), 0)
       } else {
+        loadAnonData()
         setUser(null)
         setLoading(false)
       }

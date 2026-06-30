@@ -14,19 +14,19 @@ export default function LandingScreen({ onGetStarted }: Props) {
         <p className="text-lg text-white/60 mb-8 leading-relaxed">Your AI-powered<br />personal fitness coach</p>
         <button onClick={onGetStarted}
           className="w-full max-w-xs bg-gold text-ink font-extrabold text-base py-4 rounded-2xl shadow-lg active:opacity-80 mb-3">
-          Get Started Free
+          Create My Plan — Free
         </button>
-        <p className="text-xs text-white/30">No credit card required</p>
+        <p className="text-xs text-white/30">No account required · Takes 30 seconds</p>
       </div>
 
       {/* Features */}
       <div className="px-6 pb-10 max-w-sm mx-auto">
         {[
-          { icon: 'smart_toy', title: 'AI-Generated Plans', desc: 'Workout + meal plans personalised to your body type, goal, and budget' },
+          { icon: 'smart_toy', title: 'AI-Generated Plans', desc: 'Workout + meal plans personalised to your body type, goal, and lifestyle' },
           { icon: 'restaurant', title: 'Calorie Tracker', desc: '55+ Indian foods with serving sizes. Log in seconds, not minutes' },
-          { icon: 'fitness_center', title: 'Workout Tracker', desc: 'Week view, exercise checkoffs, sport-specific protocols' },
-          { icon: 'account_balance_wallet', title: 'Budget Planner', desc: 'Realistic gym + supplement + food budget breakdown for India' },
+          { icon: 'fitness_center', title: 'Workout Tracker', desc: 'Week view, exercise checkoffs, form guides, sport-specific protocols' },
           { icon: 'trending_up', title: 'Progress Tracking', desc: 'Weight trend, monthly targets, 12-week transformation timeline' },
+          { icon: 'lock_open', title: 'No Login Required', desc: 'Create your plan instantly — sign in only when you want to start tracking' },
         ].map(({ icon, title, desc }) => (
           <div key={title} className="flex gap-4 mb-6">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -43,7 +43,7 @@ export default function LandingScreen({ onGetStarted }: Props) {
       {/* CTA */}
       <div className="px-6 pb-16 text-center">
         <button onClick={onGetStarted}
-          className="w-full max-w-xs bg-white text-ink font-extrabold text-base py-4 rounded-2xl shadow-lg active:opacity-80 mb-4">
+          className="w-full max-w-xs bg-gold text-ink font-extrabold text-base py-4 rounded-2xl shadow-lg active:opacity-80 mb-4">
           Start Your Transformation
         </button>
         <p className="text-xs text-white/20">Built for Indians · Free forever</p>

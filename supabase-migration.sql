@@ -23,3 +23,20 @@ alter table ai_plans enable row level security;
 
 create policy "Own plan only" on ai_plans
   for all using (auth.uid() = user_id);
+
+-- Personal records — synced from localStorage, one row per user+exercise
+create table if not exists personal_records (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  exercise_name text not null,
+  weight numeric not null,
+  reps integer not null,
+  date date not null,
+  updated_at timestamp default now(),
+  unique (user_id, exercise_name)
+);
+
+alter table personal_records enable row level security;
+
+create policy "Own records only" on personal_records
+  for all using (auth.uid() = user_id);

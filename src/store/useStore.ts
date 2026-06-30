@@ -3,7 +3,9 @@ import type { User } from '@supabase/supabase-js'
 import type { Profile, AIPlan, WeightEntry, Expense, WorkoutDone, FoodLog, PersonalRecord } from '../types'
 import { sb } from '../lib/supabase'
 import { generateAIPlan, calcMacros } from '../lib/gemini'
-import { estimateBudgetAI } from '../lib/aiFood'
+
+const ANON_PROFILE_KEY = 'mufasa_anon_profile'
+const ANON_PLAN_KEY    = 'mufasa_anon_plan'
 
 interface AppState {
   user: User | null
@@ -17,10 +19,15 @@ interface AppState {
   selectedDay: number
   loading: boolean
   generatingPlan: boolean
-  prs: Record<string, PersonalRecord>  // key = exercise_name lowercase
+  prs: Record<string, PersonalRecord>
+  showAuthModal: boolean
+  showProfileUpgradePrompt: boolean
   setUser: (user: User | null) => void
   setSelectedDay: (day: number) => void
   setLoading: (v: boolean) => void
+  setShowAuthModal: (v: boolean) => void
+  setShowProfileUpgradePrompt: (v: boolean) => void
+  loadAnonData: () => void
   loadUserData: (userId: string) => Promise<void>
   logWeight: (weight: number) => Promise<void>
   toggleExercise: (date: string, index: number) => Promise<void>
@@ -31,7 +38,7 @@ interface AppState {
   addFoodLog: (log: Omit<FoodLog, 'id'>) => Promise<void>
   deleteFoodLog: (id: string) => Promise<void>
   loadFoodLogs: (date: string) => Promise<void>
-  logPR: (exerciseName: string, weight: number, reps: number) => boolean  // returns true if new PR
+  logPR: (exerciseName: string, weight: number, reps: number) => boolean
   signOut: () => Promise<void>
   deactivateAccount: () => Promise<void>
   restoreAccount: () => Promise<void>
@@ -41,16 +48,27 @@ export const useStore = create<AppState>((set, get) => ({
   user: null, profile: null, plan: null, weightLog: [], workoutDone: {},
   expenses: [], foodLogs: [], startDate: null,
   selectedDay: new Date().getDay(), loading: true, generatingPlan: false,
+  showAuthModal: false,
+  showProfileUpgradePrompt: false,
   prs: JSON.parse(localStorage.getItem('mufasa_prs') || '{}'),
 
   setUser: (user) => set({ user }),
   setSelectedDay: (day) => set({ selectedDay: day }),
   setLoading: (v) => set({ loading: v }),
+  setShowAuthModal: (v) => set({ showAuthModal: v }),
+  setShowProfileUpgradePrompt: (v) => set({ showProfileUpgradePrompt: v }),
+
+  loadAnonData: () => {
+    try {
+      const profile: Profile | null = JSON.parse(localStorage.getItem(ANON_PROFILE_KEY) || 'null')
+      const plan: AIPlan | null     = JSON.parse(localStorage.getItem(ANON_PLAN_KEY) || 'null')
+      set({ profile, plan })
+    } catch {}
+  },
 
   loadUserData: async (userId) => {
     try {
-
-      const { data: profileData, error: profileError } = await sb
+      const { data: profileData } = await sb
         .from('profiles').select('*').eq('user_id', userId).single()
 
       if (profileData) {
@@ -67,7 +85,11 @@ export const useStore = create<AppState>((set, get) => ({
           body_type: profileData.body_type,
         }
         set({ profile })
-        const { data: planData, error: planError } = await sb
+        // Clear anonymous data since we have a real profile
+        localStorage.removeItem(ANON_PROFILE_KEY)
+        localStorage.removeItem(ANON_PLAN_KEY)
+
+        const { data: planData } = await sb
           .from('ai_plans').select('plan').eq('user_id', userId).single()
 
         if (planData?.plan) {
@@ -77,9 +99,6 @@ export const useStore = create<AppState>((set, get) => ({
           (async () => {
             try {
               const plan = await generateAIPlan(profile)
-              if (profile.monthly_budget) {
-                plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
-              }
               await sb.from('ai_plans').upsert(
                 { user_id: userId, plan, updated_at: new Date().toISOString() },
                 { onConflict: 'user_id' }
@@ -91,7 +110,38 @@ export const useStore = create<AppState>((set, get) => ({
             }
           })()
         }
+      } else {
+        // No Supabase profile — sync anon data to DB then prompt for missing details
+        const anonProfile: Profile | null = (() => {
+          try { return JSON.parse(localStorage.getItem(ANON_PROFILE_KEY) || 'null') } catch { return null }
+        })()
+        const anonPlan: AIPlan | null = (() => {
+          try { return JSON.parse(localStorage.getItem(ANON_PLAN_KEY) || 'null') } catch { return null }
+        })()
+        if (anonProfile) {
+          set({ profile: anonProfile })
+          if (anonPlan) set({ plan: anonPlan })
+          // Fire-and-forget sync — don't block loading
+          Promise.all([
+            sb.from('profiles').upsert({
+              user_id: userId, name: anonProfile.name, age: anonProfile.age, gender: anonProfile.gender,
+              weight: anonProfile.weight, height: anonProfile.height,
+              activity_level: anonProfile.activity_level, goal: anonProfile.goal,
+              sport: anonProfile.sport || 'none', injuries: anonProfile.injuries || 'none',
+              wake_time: anonProfile.wake_time || '06:00', sleep_time: anonProfile.sleep_time || '22:30',
+              gym_access: anonProfile.gym_access || 'home', diet_type: anonProfile.diet_type || 'non_vegetarian',
+              deactivated: false, updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' }),
+            anonPlan
+              ? sb.from('ai_plans').upsert({ user_id: userId, plan: anonPlan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+              : Promise.resolve(),
+          ])
+          localStorage.removeItem(ANON_PROFILE_KEY)
+          localStorage.removeItem(ANON_PLAN_KEY)
+          set({ showProfileUpgradePrompt: true })
+        }
       }
+
       const since = new Date(); since.setDate(since.getDate() - 60)
       const [wlRes, wdRes, expRes, flRes] = await Promise.all([
         sb.from('weight_log').select('*').eq('user_id', userId).order('date'),
@@ -139,7 +189,37 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   saveProfile: async (profile) => {
-    const { user } = get(); if (!user) return
+    const { user } = get()
+
+    if (!user) {
+      // Anonymous: fill sensible defaults for missing fields, save to localStorage
+      const filled: Profile = {
+        weight: profile.gender === 'female' ? 58 : 70,
+        height: profile.gender === 'female' ? 163 : 175,
+        activity_level: 'moderate',
+        goal: 'recomp',
+        diet_type: 'non_vegetarian',
+        gym_access: 'home',
+        sport: 'none',
+        injuries: 'none',
+        wake_time: '06:00',
+        sleep_time: '22:30',
+        ...profile,
+      } as Profile
+      localStorage.setItem(ANON_PROFILE_KEY, JSON.stringify(filled))
+      set({ profile: filled, generatingPlan: true })
+      ;(async () => {
+        try {
+          const plan = await generateAIPlan(filled)
+          localStorage.setItem(ANON_PLAN_KEY, JSON.stringify(plan))
+          set({ plan })
+        } catch (e) {}
+        finally { set({ generatingPlan: false }) }
+      })()
+      return
+    }
+
+    // Logged-in: save to Supabase
     const { error: saveError } = await sb.from('profiles').upsert({
       user_id: user.id, name: profile.name, age: profile.age, gender: profile.gender,
       weight: profile.weight, height: profile.height, activity_level: profile.activity_level,
@@ -147,36 +227,39 @@ export const useStore = create<AppState>((set, get) => ({
       sport_frequency: profile.sport_frequency || null, injuries: profile.injuries || 'none',
       wake_time: profile.wake_time || '06:00', sleep_time: profile.sleep_time || '22:30',
       gym_access: profile.gym_access || 'full_gym', diet_type: profile.diet_type || 'non_vegetarian',
-      monthly_budget: profile.monthly_budget || 5000, deactivated: false, deactivated_at: null,
+      deactivated: false, deactivated_at: null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
     if (saveError) {
       throw new Error(saveError.message)
     }
+    // Clear anonymous data
+    localStorage.removeItem(ANON_PROFILE_KEY)
+    localStorage.removeItem(ANON_PLAN_KEY)
     set({ profile, generatingPlan: true });
     (async () => {
       try {
         const plan = await generateAIPlan(profile)
-        if (profile.monthly_budget) plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
         await sb.from('ai_plans').upsert({ user_id: user.id, plan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
         set({ plan })
-      } catch (e) {
- }
+      } catch (e) {}
       finally { set({ generatingPlan: false }) }
     })()
   },
 
   regeneratePlan: async () => {
-    const { user, profile } = get(); if (!user || !profile) return
+    const { user, profile } = get(); if (!profile) return
     set({ generatingPlan: true });
     (async () => {
       try {
         const plan = await generateAIPlan(profile)
-        if (profile.monthly_budget) plan.budgetBreakdown = await estimateBudgetAI(profile, profile.monthly_budget)
-        await sb.from('ai_plans').upsert({ user_id: user.id, plan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+        if (user) {
+          await sb.from('ai_plans').upsert({ user_id: user.id, plan, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+        } else {
+          localStorage.setItem(ANON_PLAN_KEY, JSON.stringify(plan))
+        }
         set({ plan })
-      } catch (e) {
- }
+      } catch (e) {}
       finally { set({ generatingPlan: false }) }
     })()
   },
@@ -188,28 +271,17 @@ export const useStore = create<AppState>((set, get) => ({
     const updated = [...weightLog.filter(e => e.date !== date), { date, weight }].sort((a, b) => a.date.localeCompare(b.date))
     set({ weightLog: updated, startDate: updated[0]?.date ?? date })
 
-    // Update profile weight and recalculate macros if weight changed by more than 1kg
     if (profile && plan && Math.abs(weight - profile.weight) >= 1) {
       const updatedProfile = { ...profile, weight }
-
-      // Update profile in DB
       await sb.from('profiles').update({ weight, updated_at: new Date().toISOString() }).eq('user_id', user.id)
       set({ profile: updatedProfile })
-
-      // Recalculate macros with new weight
       if (calcMacros) {
         const newMacros = calcMacros(updatedProfile)
         const updatedPlan = {
           ...plan,
-          bmr: newMacros.bmr,
-          tdee: newMacros.tdee,
-          calories: newMacros.calories,
-          protein: newMacros.protein,
-          carbs: newMacros.carbs,
-          fat: newMacros.fat,
-          bmi: newMacros.bmi,
-          bmiCat: newMacros.bmiCat,
-          weightTarget: newMacros.weightTarget,
+          bmr: newMacros.bmr, tdee: newMacros.tdee, calories: newMacros.calories,
+          protein: newMacros.protein, carbs: newMacros.carbs, fat: newMacros.fat,
+          bmi: newMacros.bmi, bmiCat: newMacros.bmiCat, weightTarget: newMacros.weightTarget,
         }
         await sb.from('ai_plans').update({ plan: updatedPlan, updated_at: new Date().toISOString() }).eq('user_id', user.id)
         set({ plan: updatedPlan })
@@ -218,7 +290,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleExercise: async (date, index) => {
-    const { user, workoutDone } = get(); if (!user) return
+    const { user, workoutDone } = get()
+    if (!user) { set({ showAuthModal: true }); return }
     const key = 'wd_' + date
     const newVal = !(workoutDone[key]?.[index] ?? false)
     set({ workoutDone: { ...workoutDone, [key]: { ...(workoutDone[key] || {}), [index]: newVal } } })
@@ -242,10 +315,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   addFoodLog: async (log) => {
     const { user, foodLogs } = get()
-    // Optimistic update — show immediately in UI
+    if (!user) { set({ showAuthModal: true }); return }
     const tempId = 'temp_' + Date.now()
     set({ foodLogs: [...foodLogs, { ...log, id: tempId }] })
-    if (!user) return  // no auth — stay with optimistic entry
     const { data, error } = await sb.from('food_logs').insert({
       user_id: user.id, date: log.date, meal_slot: log.meal_slot,
       food_name: log.food_name, serving_label: log.serving_label,
@@ -253,10 +325,8 @@ export const useStore = create<AppState>((set, get) => ({
       protein: log.protein, carbs: log.carbs, fat: log.fat,
     }).select().single()
     if (data) {
-      // Replace temp entry with persisted one (real id)
       set({ foodLogs: get().foodLogs.map(f => f.id === tempId ? { ...log, id: data.id } : f) })
     } else if (error) {
-      // Revert optimistic update on failure
       set({ foodLogs: get().foodLogs.filter(f => f.id !== tempId) })
       throw new Error(error.message)
     }
@@ -272,7 +342,6 @@ export const useStore = create<AppState>((set, get) => ({
     const { prs } = get()
     const key = exerciseName.toLowerCase().trim()
     const existing = prs[key]
-    // A PR is better if: higher weight, or same weight with more reps
     const isNewPR = !existing
       || weight > existing.weight
       || (weight === existing.weight && reps > existing.reps)
