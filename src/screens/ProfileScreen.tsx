@@ -12,7 +12,7 @@ const CARD    = 'rgba(255,255,255,0.05)'
 const DANGER  = '#E05252'
 
 export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?: () => void; onEditEnd?: () => void }) {
-  const { user, profile, plan, signOut, deactivateAccount, setShowAuthModal } = useStore()
+  const { user, profile, plan, signOut, deactivateAccount, setShowAuthModal, isDemo } = useStore()
   const [editing, setEditing]             = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -24,10 +24,10 @@ export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?
   )
 
   // Anonymous user view
-  if (!user) {
+  if (!user && !isDemo) {
     return (
       <div style={{
-        minHeight: '100vh', paddingBottom: 100,
+        minHeight: '100%', paddingBottom: 100,
         background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
         position: 'relative', overflow: 'hidden',
       }}>
@@ -133,7 +133,7 @@ export default function ProfileScreen({ onEditStart, onEditEnd }: { onEditStart?
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100%',
       paddingBottom: 100,
       background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
       position: 'relative', overflow: 'hidden',

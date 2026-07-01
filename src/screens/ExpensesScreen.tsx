@@ -28,7 +28,7 @@ const EXPENSES_BG = 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 7
 
 function ExpensesAuthGate({ onSignIn }: { onSignIn: () => void }) {
   return (
-    <div style={{ minHeight: '100vh', background: EXPENSES_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
+    <div style={{ minHeight: '100%', background: EXPENSES_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
       <span className="ms" style={{ fontSize: 52, color: 'rgba(212,168,75,0.3)', display: 'block', marginBottom: 20 }}>account_balance_wallet</span>
       <h2 style={{ fontSize: 24, fontWeight: 800, color: '#F0E4C8', letterSpacing: '-0.5px', marginBottom: 10 }}>Expense Tracker</h2>
@@ -43,7 +43,7 @@ function ExpensesAuthGate({ onSignIn }: { onSignIn: () => void }) {
 }
 
 export default function ExpensesScreen() {
-  const { expenses, addExpense, deleteExpense, plan, profile, user, setShowAuthModal } = useStore()
+  const { expenses, addExpense, deleteExpense, plan, profile, user, setShowAuthModal, isDemo } = useStore()
   const [name,   setName]   = useState('')
   const [amount, setAmount] = useState('')
   const [cat,    setCat]    = useState<Expense['cat']>('supplement')
@@ -51,7 +51,7 @@ export default function ExpensesScreen() {
   const [tab, setTab] = useState<'tracker' | 'budget'>('tracker')
 
   // Auth gate — must come after all hooks
-  if (!user) return <ExpensesAuthGate onSignIn={() => setShowAuthModal(true)} />
+  if (!user && !isDemo) return <ExpensesAuthGate onSignIn={() => setShowAuthModal(true)} />
 
   const month         = new Date().toISOString().slice(0, 7)
   const thisMonth     = expenses.filter(e => e.month === month)
@@ -81,7 +81,7 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <div style={{ background: 'linear-gradient(180deg, #2A1608 0%, #180B04 25%, #120D08 55%, #0E0A06 100%)', minHeight: '100vh', paddingBottom: 96 }}>
+    <div style={{ background: 'linear-gradient(180deg, #2A1608 0%, #180B04 25%, #120D08 55%, #0E0A06 100%)', minHeight: '100%', paddingBottom: 96 }}>
 
       {/* ── Header ──────────────────────────────────────── */}
       <div style={{ padding: 'max(env(safe-area-inset-top, 0px), 24px) 20px 16px' }}>

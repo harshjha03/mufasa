@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
 
 // ── Design tokens — immersiveBronze spec ─────────────────
@@ -102,18 +103,24 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
 
   const loggedMeals = todayLogs.length
 
+  const [scrollY, setScrollY] = useState(0)
+  const outerRef = useRef<HTMLDivElement>(null)
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      paddingBottom: 100,
-      // Immersive radial gradient — spec: radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)
-      background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
-      position: 'relative', overflow: 'hidden',
-    }}>
-      {/* Ambient glow 1 — warm top-right */}
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.22), transparent 60%)', pointerEvents: 'none' }} />
-      {/* Ambient glow 2 — circle */}
-      <div style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(228,178,106,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
+    <div
+      ref={outerRef}
+      onScroll={e => setScrollY((e.currentTarget as HTMLDivElement).scrollTop)}
+      style={{
+        minHeight: '100%',
+        paddingBottom: 100,
+        background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)',
+        position: 'relative', overflowX: 'hidden',
+      }}
+    >
+      {/* Ambient glow 1 — parallax: moves up at 30% scroll speed */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.22), transparent 60%)', pointerEvents: 'none', transform: `translateY(${-scrollY * 0.3}px)` }} />
+      {/* Ambient glow 2 — parallax: moves up at 20% scroll speed */}
+      <div style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(228,178,106,0.18) 0%, transparent 65%)', pointerEvents: 'none', transform: `translateY(${-scrollY * 0.2}px)` }} />
 
       {/* ── Top bar: greeting + chips ───────────────────── */}
       <div style={{
@@ -391,6 +398,9 @@ export default function TodayScreen({ onNavigate }: { onNavigate?: (s: string) =
           </div>
         ))}
       </div>
+
+      {/* ── Divider ─────────────────────────────────────── */}
+      <div style={{ height: 1, background: DIVIDER, margin: '0 20px' }} />
 
     </div>
   )

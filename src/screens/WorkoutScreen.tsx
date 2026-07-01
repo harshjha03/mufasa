@@ -406,7 +406,7 @@ export default function WorkoutScreen() {
   }
 
   return (
-    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100vh', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100%', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
 
       {/* ── Header ──────────────────────────────────────── */}

@@ -57,7 +57,7 @@ function MiniRing({ value, target, label, color, unit = 'g' }: {
 
 // ────────────────────────────────────────────────────────
 export default function NutritionScreen() {
-  const { plan, foodLogs, addFoodLog, deleteFoodLog, loadFoodLogs, user, setShowAuthModal } = useStore()
+  const { plan, foodLogs, addFoodLog, deleteFoodLog, loadFoodLogs, user, setShowAuthModal, isDemo } = useStore()
   const [tab, setTab]                 = useState<'plan' | 'log'>('plan')
   const [openMeal, setOpenMeal]       = useState<number | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>('breakfast')
@@ -137,7 +137,7 @@ export default function NutritionScreen() {
   const meals = plan?.meals ?? []
 
   return (
-    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100vh', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: 'radial-gradient(130% 100% at 100% 0%, #6B4423 0%, #2E1B0E 75%)', minHeight: '100%', paddingBottom: 96, position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 50% at 90% 0%, rgba(255,200,140,0.18), transparent 60%)', pointerEvents: 'none' }} />
 
       {/* ── Header ──────────────────────────────────────── */}
@@ -303,7 +303,7 @@ export default function NutritionScreen() {
       )}
 
       {/* ── LOG TAB ────────────────────────────────────── */}
-      {tab === 'log' && !user && (
+      {tab === 'log' && !user && !isDemo && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
           <span className="ms" style={{ fontSize: 48, color: 'rgba(228,178,106,0.25)', display: 'block', marginBottom: 16 }}>restaurant</span>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Log Your Meals</h3>
@@ -315,7 +315,7 @@ export default function NutritionScreen() {
           </button>
         </div>
       )}
-      {tab === 'log' && !!user && (
+      {tab === 'log' && (!!user || isDemo) && (
         <>
           {/* Macro rings — live progress */}
           <div style={{ margin: '0 16px 12px', background: CARD, borderRadius: 20, padding: '18px 16px', border: `1px solid ${BORDER}` }}>

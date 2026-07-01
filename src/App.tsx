@@ -42,7 +42,7 @@ function LoadingScreen() {
 
 export default function App() {
   useAuth()
-  const { profile, plan, loading, generatingPlan, showAuthModal, setShowAuthModal, showProfileUpgradePrompt, setShowProfileUpgradePrompt } = useStore()
+  const { profile, plan, loading, generatingPlan, showAuthModal, setShowAuthModal, showProfileUpgradePrompt, setShowProfileUpgradePrompt, isDemo, exitDemo } = useStore()
   const [screen, setScreen] = useState('today')
   const [showLanding, setShowLanding] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
@@ -55,10 +55,14 @@ export default function App() {
 
   if (loading) return <LoadingScreen />
 
-  // No profile yet — show landing/onboarding (works for both anon and new logged-in users)
-  if (!profile) return showLanding
-    ? <LandingScreen onGetStarted={() => setShowLanding(false)} />
-    : <OnboardingScreen />
+  // No profile yet — wrapped in the same mobile container
+  if (!profile) return (
+    <div className="max-w-[480px] mx-auto bg-cream relative" style={{ height: '100dvh', overflow: 'hidden' }}>
+      {showLanding
+        ? <LandingScreen onGetStarted={() => setShowLanding(false)} />
+        : <OnboardingScreen />}
+    </div>
+  )
 
   if ((profile as any).deactivated) return <DeactivatedScreen />
 
@@ -100,7 +104,19 @@ export default function App() {
 
   return (
     <div className="max-w-[480px] mx-auto bg-cream relative" style={{ height: '100dvh', overflow: 'hidden' }}>
-      <div ref={scrollRef} className="overflow-y-auto overflow-x-hidden" style={{ height: isEditing ? '100dvh' : 'calc(100dvh - 64px)' }}>
+
+      {/* Demo banner */}
+      {isDemo && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 80, background: 'rgba(212,168,75,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#120D08' }}>DEMO — sample data only</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => setShowAuthModal(true)} style={{ fontSize: 11, fontWeight: 800, color: '#120D08', background: 'rgba(0,0,0,0.15)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>Sign in</button>
+            <button onClick={exitDemo} style={{ fontSize: 11, fontWeight: 700, color: 'rgba(18,13,8,0.6)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+          </div>
+        </div>
+      )}
+
+      <div ref={scrollRef} className="overflow-y-auto overflow-x-hidden" style={{ height: isEditing ? (isDemo ? 'calc(100dvh - 30px)' : '100dvh') : `calc(100dvh - ${isDemo ? 94 : 64}px)`, marginTop: isDemo ? 30 : 0 }}>
         {renderScreen()}
       </div>
       {!isEditing && <BottomNav active={screen} onChange={navigate} />}

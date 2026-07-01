@@ -4,6 +4,21 @@ export default {
   theme: {
     extend: {
       colors: {
+        // ── SHADCN CSS-VARIABLE TOKENS ──
+        background:   'var(--background)',
+        foreground:   'var(--foreground)',
+        border:       'var(--border)',
+        card:         { DEFAULT: 'var(--card)',        foreground: 'var(--card-foreground)' },
+        primary:      { DEFAULT: 'var(--primary)',     foreground: 'var(--primary-foreground)' },
+        secondary:    { DEFAULT: 'var(--secondary)',   foreground: 'var(--secondary-foreground)' },
+        destructive:  { DEFAULT: 'var(--destructive)', foreground: 'var(--destructive-foreground)' },
+        muted:        { DEFAULT: 'var(--muted)',       foreground: 'var(--muted-foreground)' },
+        'chart-1':    'var(--chart-1)',
+        'chart-2':    'var(--chart-2)',
+        'chart-3':    'var(--chart-3)',
+        'chart-4':    'var(--chart-4)',
+        'chart-5':    'var(--chart-5)',
+
         // ── MUFASA DARK PALETTE — Immersive Bronze ──
 
         // Backgrounds

@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import type { Profile, AIPlan, WeightEntry, Expense, WorkoutDone, FoodLog, PersonalRecord } from '../types'
 import { sb } from '../lib/supabase'
 import { generateAIPlan, calcMacros } from '../lib/gemini'
+import { DEMO_PROFILE, DEMO_PLAN, DEMO_WEIGHT_LOG, DEMO_PRS, DEMO_EXPENSES } from '../lib/demoData'
 
 const ANON_PROFILE_KEY = 'mufasa_anon_profile'
 const ANON_PLAN_KEY    = 'mufasa_anon_plan'
@@ -22,11 +23,14 @@ interface AppState {
   prs: Record<string, PersonalRecord>
   showAuthModal: boolean
   showProfileUpgradePrompt: boolean
+  isDemo: boolean
   setUser: (user: User | null) => void
   setSelectedDay: (day: number) => void
   setLoading: (v: boolean) => void
   setShowAuthModal: (v: boolean) => void
   setShowProfileUpgradePrompt: (v: boolean) => void
+  loadDemoData: () => void
+  exitDemo: () => void
   loadAnonData: () => void
   loadUserData: (userId: string) => Promise<void>
   logWeight: (weight: number) => Promise<void>
@@ -50,6 +54,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedDay: new Date().getDay(), loading: true, generatingPlan: false,
   showAuthModal: false,
   showProfileUpgradePrompt: false,
+  isDemo: false,
   prs: JSON.parse(localStorage.getItem('mufasa_prs') || '{}'),
 
   setUser: (user) => set({ user }),
@@ -57,6 +62,50 @@ export const useStore = create<AppState>((set, get) => ({
   setLoading: (v) => set({ loading: v }),
   setShowAuthModal: (v) => set({ showAuthModal: v }),
   setShowProfileUpgradePrompt: (v) => set({ showProfileUpgradePrompt: v }),
+
+  loadDemoData: () => {
+    const d = (offset: number) => {
+      const date = new Date()
+      date.setDate(date.getDate() - offset)
+      return date.toISOString().split('T')[0]
+    }
+    const today = d(0)
+
+    // Simulate recent workout completions (all 5 exercises per day)
+    const workoutDone: WorkoutDone = {
+      ['wd_' + today]:  { 0: true, 1: true, 2: false, 3: false, 4: false },
+      ['wd_' + d(3)]:   { 0: true, 1: true, 2: true, 3: true, 4: true },
+      ['wd_' + d(5)]:   { 0: true, 1: true, 2: true, 3: true, 4: true },
+      ['wd_' + d(7)]:   { 0: true, 1: true, 2: true, 3: true, 4: false },
+      ['wd_' + d(10)]:  { 0: true, 1: true, 2: true, 3: true, 4: true },
+      ['wd_' + d(12)]:  { 0: true, 1: true, 2: true, 3: false, 4: false },
+      ['wd_' + d(14)]:  { 0: true, 1: true, 2: true, 3: true, 4: true },
+    }
+
+    const foodLogs: FoodLog[] = [
+      { id: 'demo_fl1', date: today, meal_slot: 'breakfast', food_name: '4 whole eggs + 2 slices brown bread', serving_label: '1 serving', calories: 480, protein: 32, carbs: 38, fat: 18, quantity: 1 },
+      { id: 'demo_fl2', date: today, meal_slot: 'lunch',     food_name: 'Dal tadka + brown rice + cucumber salad', serving_label: '1 serving', calories: 520, protein: 18, carbs: 78, fat: 8,  quantity: 1 },
+      { id: 'demo_fl3', date: today, meal_slot: 'snack',     food_name: 'Whey protein shake + 1 apple', serving_label: '1 scoop + 1 medium', calories: 200, protein: 30, carbs: 20, fat: 2, quantity: 1 },
+    ]
+
+    set({
+      profile: DEMO_PROFILE,
+      plan: DEMO_PLAN,
+      weightLog: DEMO_WEIGHT_LOG,
+      prs: DEMO_PRS,
+      expenses: DEMO_EXPENSES,
+      startDate: DEMO_WEIGHT_LOG[0].date,
+      workoutDone,
+      foodLogs,
+      isDemo: true,
+      loading: false,
+    })
+  },
+
+  exitDemo: () => set({
+    profile: null, plan: null, weightLog: [], prs: {}, startDate: null,
+    workoutDone: {}, foodLogs: [], isDemo: false,
+  }),
 
   loadAnonData: () => {
     try {
